@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Checkpoint PWA</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#090d16">
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        :root {
+            --bg-color: #090d16;
+            --card-bg: #111827;
+            --text-color: #f3f4f6;
+            --accent-color: #38bdf8;
+            --purple-color: #a855f7;
+            --border-color: #1f2937;
+            --danger-color: #ef4444;
+            --success-color: #22c55e;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-color); padding: 0; min-height: 100vh; display: flex; flex-direction: column; }
+        
+        .navbar { background: var(--card-bg); border-bottom: 1px solid var(--border-color); padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+        .menu-btn { background: none; border: none; color: var(--accent-color); font-size: 24px; cursor: pointer; }
+        .nav-title { font-size: 16px; font-weight: bold; color: var(--text-color); }
+
+        .sidebar { position: fixed; top: 0; left: -280px; width: 280px; height: 100%; background: var(--card-bg); border-right: 1px solid var(--border-color); z-index: 999; transition: left 0.3s ease; display: flex; flex-direction: column; padding: 20px 0; }
+        .sidebar.active { left: 0; }
+        .sidebar-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 998; display: none; }
+        .sidebar-header { padding: 0 20px 16px; border-bottom: 1px solid var(--border-color); }
+        .sidebar-menu { list-style: none; margin-top: 10px; }
+        .sidebar-menu li { padding: 14px 20px; color: #9ca3af; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 10px; border-left: 4px solid transparent; }
+        .sidebar-menu li.active { color: var(--accent-color); background: #1e293b; border-left-color: var(--accent-color); font-weight: bold; }
+
+        .container { padding: 16px; width: 100%; max-width: 480px; margin: 0 auto; flex: 1; text-align: center; }
+        
+        .btn { width: 100%; padding: 13px; margin-top: 10px; border: none; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-checkout { background: var(--accent-color); color: #090d16; }
+        .btn-checkin { background: var(--purple-color); color: #ffffff; }
+        .btn-danger { background: var(--danger-color); color: #ffffff; }
+        .btn-secondary { background: #1f2937; color: var(--text-color); border: 1px solid var(--border-color); }
+
+        .form-group { margin-bottom: 12px; text-align: left; }
+        label { display: block; margin-bottom: 6px; font-size: 12px; color: #9ca3af; }
+        input, select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: #030712; color: #fff; font-size: 14px; }
+        
+        #reader { width: 100%; margin-top: 15px; border-radius: 8px; overflow: hidden; display: none; }
+        
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .item-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 14px; margin-bottom: 12px; text-align: left; }
+        .item-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+        .badge-avail { background: #064e3b; color: #34d399; }
+        .badge-borrowed { background: #7f1d1d; color: #fca5a5; }
+
+        /* QR Code Tag Box */
+        .qrcode-box { background: white; padding: 10px; border-radius: 8px; margin-top: 10px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .qrcode-img { width: 140px; height: 140px; display: block; margin: 0 auto; }
+        .qrcode-text { color: black; font-weight: bold; font-family: monospace; font-size: 15px; margin-top: 4px; }
+
+        .filter-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+        .log-box { background: #030712; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 12px; max-height: 450px; overflow-y: auto; text-align: left; border: 1px solid var(--border-color); }
+        
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: var(--card-bg); padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; border: 1px solid var(--border-color); }
+
+        /* Style สำหรับการสั่งพิมพ์ Tag QR Code ออกกระดาษ */
+        @media print {
+            body * { visibility: hidden; }
+            #printSection, #printSection * { visibility: visible; }
+            #printSection { position: absolute; left: 0; top: 0; width: 100%; text-align: center; background: white; color: black; padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="navbar" id="mainNavbar" style="display: none;">
+    <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+    <div class="nav-title" id="pageTitle">อุปกรณ์ & ยืม-คืน</div>
+    <div style="width: 24px;"></div>
+</div>
+
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <h3 style="color: var(--accent-color);">Checkpoint Menu</h3>
+        <p style="font-size: 12px; color: #9ca3af; margin-top: 4px;">ผู้ใช้งาน: <b id="sideUser" style="color:#fff;">-</b></p>
+    </div>
+    <ul class="sidebar-menu">
+        <li id="menu-equip" class="active" onclick="switchTab('equip', 'อุปกรณ์ & ยืม-คืน')">📦 อุปกรณ์ & ยืม-คืน</li>
+        <li id="menu-logs" onclick="switchTab('logs', 'ประวัติ Real-time Logs')">📜 ประวัติ Real-time Logs</li>
+        <li id="menu-profile" onclick="switchTab('profile', 'เปลี่ยน รหัสผ่าน / User')">👤 เปลี่ยน รหัสผ่าน / User</li>
+        <li id="menu-admin" onclick="switchTab('admin', 'จัดการระบบ Admin')">⚙️ จัดการระบบ (Admin)</li>
+        <li onclick="logout()" style="color: var(--danger-color); margin-top: 20px;">🚪 ออกจากระบบ</li>
+    </ul>
+</div>
+
+<div class="container">
+    <div id="loginView" style="margin-top: 40px;">
+        <h2>Checkpoint System</h2>
+        <p style="font-size:13px; color:#9ca3af; margin: 10px 0 20px;">เข้าสู่ระบบเพื่อใช้งาน</p>
+        <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="loginUser" placeholder="กรอก Username">
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="loginPass" placeholder="กรอก Password">
+        </div>
+        <button class="btn btn-checkout" onclick="performLogin()">เข้าสู่ระบบ</button>
+        <button class="btn btn-secondary" onclick="openRegisterModal()" style="margin-top: 12px;">➕ สมัครสมาชิกใหม่ (Register)</button>
+    </div>
+
+    <div id="appView" style="display: none;">
+        
+        <!-- Tab 1: อุปกรณ์ & QR Code Tag -->
+        <div id="tab-equip" class="tab-content active">
+            <button class="btn btn-checkout" onclick="startScan('CHECKOUT')">📷 สแกน QR Code ยืมอุปกรณ์ (Checkout)</button>
+            <button class="btn btn-checkin" onclick="startScan('CHECKIN')">📷 สแกน QR Code คืนอุปกรณ์ (Checkin)</button>
+            <div id="reader"></div>
+
+            <h3 style="font-size: 14px; text-align: left; margin: 20px 0 10px; color: #9ca3af;">รายการอุปกรณ์ & QR Code Tags</h3>
+            <div id="equipmentList">กำลังโหลด...</div>
+        </div>
+
+        <!-- Tab 2: Logs หมวดเวลา -->
+        <div id="tab-logs" class="tab-content">
+            <div class="filter-grid">
+                <div>
+                    <label>ปี (Year)</label>
+                    <select id="filterYear" onchange="loadDashboard()">
+                        <option value="ALL">ทุกปี</option>
+                        <option value="2026" selected>2026</option>
+                        <option value="2025">2025</option>
+                    </select>
+                </div>
+                <div>
+                    <label>เดือน (Month)</label>
+                    <select id="filterMonth" onchange="loadDashboard()">
+                        <option value="ALL">ทุกเดือน</option>
+                        <option value="1">ม.ค.</option><option value="2">ก.พ.</option>
+                        <option value="3">มี.ค.</option><option value="4">เม.ย.</option>
+                        <option value="5">พ.ค.</option><option value="6">มิ.ย.</option>
+                        <option value="7">ก.ค.</option><option value="8">ส.ค.</option>
+                        <option value="9">ก.ย.</option><option value="10">ต.ค.</option>
+                        <option value="11">พ.ย.</option><option value="12">ธ.ค.</option>
+                    </select>
+                </div>
+                <div>
+                    <label>วัน (Day)</label>
+                    <select id="filterDay" onchange="loadDashboard()">
+                        <option value="ALL">ทุกวัน</option>
+                    </select>
+                </div>
+            </div>
+            <div id="logBox" class="log-box">กำลังโหลด logs...</div>
+        </div>
+
+        <!-- Tab 3: เปลี่ยน Profile/Password -->
+        <div id="tab-profile" class="tab-content">
+            <div style="background: var(--card-bg); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 20px; text-align: left;">
+                <h3 style="color: var(--accent-color); margin-bottom: 15px;">👤 เปลี่ยน Username</h3>
+                <div class="form-group">
+                    <label>Username ใหม่</label>
+                    <input type="text" id="changeNewUsername" placeholder="กรอก Username ใหม่">
+                </div>
+                <div class="form-group">
+                    <label>รหัสผ่านปัจจุบัน</label>
+                    <input type="password" id="changeUserPassConfirm1" placeholder="กรอกรหัสผ่านเพื่อยืนยัน">
+                </div>
+                <div class="form-group">
+                    <label>ยืนยันรหัสผ่านปัจจุบันอีกครั้ง</label>
+                    <input type="password" id="changeUserPassConfirm2" placeholder="กรอกรหัสผ่านยืนยันอีกครั้ง">
+                </div>
+                <button class="btn btn-checkout" onclick="updateUsername()">เปลี่ยน Username</button>
+            </div>
+
+            <div style="background: var(--card-bg); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); text-align: left;">
+                <h3 style="color: var(--purple-color); margin-bottom: 15px;">🔑 เปลี่ยน รหัสผ่าน</h3>
+                <div class="form-group">
+                    <label>รหัสผ่านเดิม</label>
+                    <input type="password" id="oldPassInput" placeholder="กรอกรหัสผ่านเดิม">
+                </div>
+                <div class="form-group">
+                    <label>รหัสผ่านใหม่</label>
+                    <input type="password" id="newPassInput" placeholder="กรอกรหัสผ่านใหม่">
+                </div>
+                <div class="form-group">
+                    <label>ยืนยันรหัสผ่านใหม่</label>
+                    <input type="password" id="confirmNewPassInput" placeholder="กรอกรหัสผ่านใหม่ซ้ำอีกครั้ง">
+                </div>
+                <button class="btn btn-checkin" onclick="updatePassword()">เปลี่ยน รหัสผ่าน</button>
+            </div>
+        </div>
+
+        <!-- Tab 4: Admin Panel -->
+        <div id="tab-admin" class="tab-content">
+            <div style="background: var(--card-bg); padding: 16px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 15px;">
+                <h3>เพิ่มอุปกรณ์ใหม่ (เจน QR Code อัตโนมัติ)</h3>
+                <div class="form-group" style="margin-top: 10px;">
+                    <label>Admin Action PIN *</label>
+                    <input type="password" id="addEqPin" placeholder="รหัส PIN (Default: 9999)">
+                </div>
+                <div class="form-group">
+                    <label>รหัสอุปกรณ์ / QR Code Tag ID</label>
+                    <input type="text" id="addEqId" placeholder="เช่น EQ-103">
+                </div>
+                <div class="form-group">
+                    <label>ชื่ออุปกรณ์</label>
+                    <input type="text" id="addEqName" placeholder="เช่น สว่านกระแทก">
+                </div>
+                <button class="btn btn-checkout" onclick="addEquipment()">เพิ่มอุปกรณ์ & เจน QR Code</button>
+            </div>
+
+            <div style="background: var(--card-bg); padding: 16px; border-radius: 8px; border: 1px solid var(--border-color);">
+                <h3>เปลี่ยน Admin Action PIN</h3>
+                <div class="form-group" style="margin-top: 10px;">
+                    <label>PIN เดิม</label>
+                    <input type="password" id="oldPinInput">
+                </div>
+                <div class="form-group">
+                    <label>PIN ใหม่</label>
+                    <input type="password" id="newPinInput">
+                </div>
+                <button class="btn btn-secondary" onclick="changeAdminPin()">อัปเดต Admin PIN</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Div ซ่อนสำหรับใช้สั่งพิมพ์ Tag QR Code ออกกระดาษ -->
+<div id="printSection" style="display:none;"></div>
+
+<!-- Modal Register -->
+<div id="registerModal" class="modal">
+    <div class="modal-content">
+        <h3>สมัครสมาชิกใหม่</h3>
+        <div class="form-group" style="margin-top: 15px;">
+            <label>Username</label>
+            <input type="text" id="regUser" placeholder="ตั้ง Username">
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="regPass" placeholder="ตั้ง Password">
+        </div>
+        <div class="form-group">
+            <label>ชื่อ-นามสกุล ผู้ใช้งาน</label>
+            <input type="text" id="regName" placeholder="เช่น ช่างสมชาย">
+        </div>
+        <button class="btn btn-checkout" onclick="performRegister()">ลงทะเบียนผู้ใช้</button>
+        <button class="btn btn-danger" onclick="closeModal('registerModal')">ยกเลิก</button>
+    </div>
+</div>
+
+<!-- Modal ยืมอุปกรณ์ -->
+<div id="vehicleModal" class="modal">
+    <div class="modal-content">
+        <h3>บันทึกการยืมอุปกรณ์</h3>
+        <p style="margin: 10px 0; font-size: 14px;">รหัสอุปกรณ์: <b id="modalEqId" style="color: var(--accent-color);"></b></p>
+        <div class="form-group">
+            <label>ทะเบียนรถ <span style="color:var(--danger-color);">*</span></label>
+            <input type="text" id="plateInput" placeholder="เช่น กข-1234">
+        </div>
+        <div class="form-group">
+            <label>ชื่อผู้ขับขี่</label>
+            <input type="text" id="driverInput" placeholder="เช่น นายสมชาย">
+        </div>
+        <button class="btn btn-checkout" onclick="confirmCheckout()">บันทึกยืม</button>
+        <button class="btn btn-danger" onclick="closeModal('vehicleModal')">ยกเลิก</button>
+    </div>
+</div>
+
+<script>
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+
+    let currentMode = "";
+    let scannedEqId = "";
+    let html5QrcodeScanner = null;
+    let isLoggedIn = false;
+
+    window.addEventListener('DOMContentLoaded', () => {
+        const daySelect = document.getElementById('filterDay');
+        for (let i = 1; i <= 31; i++) {
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.innerText = i;
+            daySelect.appendChild(opt);
+        }
+
+        const token = localStorage.getItem('token');
+        const user = localStorage.getItem('username');
+        if (token && user) {
+            showAppView(user);
+        } else {
+            document.getElementById('mainNavbar').style.display = 'none';
+        }
+    });
+
+    function toggleSidebar() {
+        if (!isLoggedIn) return;
+        const sb = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        if (sb.classList.contains('active')) {
+            sb.classList.remove('active');
+            overlay.style.display = 'none';
+        } else {
+            sb.classList.add('active');
+            overlay.style.display = 'block';
+        }
+    }
+
+    function switchTab(tabName, title) {
+        if (!isLoggedIn) return;
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.sidebar-menu li').forEach(el => el.classList.remove('active'));
+        
+        document.getElementById(`tab-${tabName}`).classList.add('active');
+        document.getElementById(`menu-${tabName}`).classList.add('active');
+        document.getElementById('pageTitle').innerText = title;
+        toggleSidebar();
+    }
+
+    async function performLogin() {
+        const u = document.getElementById('loginUser').value;
+        const p = document.getElementById('loginPass').value;
+        if (!u || !p) { alert("กรุณากรอก Username และ Password!"); return; }
+
+        const res = await fetch('/api/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ username: u, password: p })
+        });
+        const data = await res.json();
+        if (data.success) {
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('username', data.username);
+            showAppView(data.username);
+        } else {
+            alert(data.message);
+        }
+    }
+
+    function showAppView(username) {
+        isLoggedIn = true;
+        document.getElementById('loginView').style.display = 'none';
+        document.getElementById('mainNavbar').style.display = 'flex';
+        document.getElementById('appView').style.display = 'block';
+        document.getElementById('sideUser').innerText = username;
+        document.getElementById('changeNewUsername').value = username;
+        loadDashboard();
+        setInterval(loadDashboard, 3000);
+    }
+
+    function logout() {
+        localStorage.clear();
+        location.reload();
+    }
+
+    function openRegisterModal() {
+        document.getElementById('registerModal').style.display = 'flex';
+    }
+
+    async function performRegister() {
+        const u = document.getElementById('regUser').value;
+        const p = document.getElementById('regPass').value;
+        const n = document.getElementById('regName').value;
+
+        if (!u || !p || !n) { alert("กรอกข้อมูลให้ครบทุกช่อง!"); return; }
+
+        const res = await fetch('/api/register', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ username: u, password: p, name: n })
+        });
+        const data = await res.json();
+        alert(data.message);
+        if (data.success) {
+            closeModal('registerModal');
+            document.getElementById('loginUser').value = u;
+            document.getElementById('loginPass').value = p;
+            performLogin();
+        }
+    }
+
+    async function updateUsername() {
+        const newUsername = document.getElementById('changeNewUsername').value.trim();
+        const pass1 = document.getElementById('changeUserPassConfirm1').value;
+        const pass2 = document.getElementById('changeUserPassConfirm2').value;
+        const token = localStorage.getItem('token');
+
+        if (!newUsername || !pass1 || !pass2) { alert("กรุณากรอกข้อมูลให้ครบทุกช่อง!"); return; }
+        if (pass1 !== pass2) { alert("รหัสผ่านยืนยันทั้ง 2 ช่องไม่ตรงกัน!"); return; }
+
+        const res = await fetch('/api/change_username', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ token: token, new_username: newUsername, password_confirm: pass1 })
+        });
+        const data = await res.json();
+        alert(data.message);
+
+        if (data.success) {
+            localStorage.setItem('token', data.new_token);
+            localStorage.setItem('username', data.new_username);
+            document.getElementById('sideUser').innerText = data.new_username;
+            document.getElementById('changeUserPassConfirm1').value = '';
+            document.getElementById('changeUserPassConfirm2').value = '';
+            loadDashboard();
+        }
+    }
+
+    async function updatePassword() {
+        const oldPass = document.getElementById('oldPassInput').value;
+        const newPass = document.getElementById('newPassInput').value;
+        const confirmNewPass = document.getElementById('confirmNewPassInput').value;
+        const token = localStorage.getItem('token');
+
+        if (!oldPass || !newPass || !confirmNewPass) { alert("กรุณากรอกข้อมูลให้ครบทุกช่อง!"); return; }
+        if (newPass !== confirmNewPass) { alert("รหัสผ่านใหม่ และ รหัสผ่านยืนยัน ไม่ตรงกัน!"); return; }
+
+        const res = await fetch('/api/change_password', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ token: token, old_password: oldPass, new_password: newPass })
+        });
+        const data = await res.json();
+        alert(data.message);
+
+        if (data.success) {
+            document.getElementById('oldPassInput').value = '';
+            document.getElementById('newPassInput').value = '';
+            document.getElementById('confirmNewPassInput').value = '';
+            loadDashboard();
+        }
+    }
+
+    function startScan(mode) {
+        currentMode = mode;
+        document.getElementById('reader').style.display = 'block';
+        if (!html5QrcodeScanner) {
+            html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 220 });
+            html5QrcodeScanner.render(onScanSuccess);
+        }
+    }
+
+    async function onScanSuccess(decodedText) {
+        scannedEqId = decodedText;
+        if (html5QrcodeScanner) {
+            await html5QrcodeScanner.clear();
+            document.getElementById('reader').style.display = 'none';
+            html5QrcodeScanner = null;
+        }
+
+        if (currentMode === "CHECKOUT") {
+            document.getElementById('modalEqId').innerText = scannedEqId;
+            document.getElementById('vehicleModal').style.display = 'flex';
+        } else if (currentMode === "CHECKIN") {
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/checkin', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ eq_id: scannedEqId, token: token })
+            });
+            const data = await res.json();
+            alert(data.message);
+            loadDashboard();
+        }
+    }
+
+    async function confirmCheckout() {
+        const plate = document.getElementById('plateInput').value.trim();
+        const driver = document.getElementById('driverInput').value.trim();
+        const token = localStorage.getItem('token');
+
+        if (!plate) { alert("กรุณากรอกทะเบียนรถ!"); return; }
+
+        const res = await fetch('/api/checkout', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ eq_id: scannedEqId, plate_number: plate, driver_name: driver, token: token })
+        });
+        const data = await res.json();
+        alert(data.message);
+        closeModal('vehicleModal');
+        loadDashboard();
+    }
+
+    function printQrTag(eqId, eqName, qrSrc) {
+        const printSec = document.getElementById('printSection');
+        printSec.innerHTML = `
+            <div style="border: 2px dashed #000; padding: 20px; display: inline-block; border-radius: 8px;">
+                <h2 style="margin-bottom: 5px;">${eqName}</h2>
+                <img src="${qrSrc}" style="width: 180px; height: 180px; margin: 10px 0;">
+                <p style="font-size: 16px; font-weight: bold; font-family: monospace;">${eqId}</p>
+                <p style="font-size: 11px; color: #555; margin-top: 5px;">CHECKPOINT EQUIPMENT TAG</p>
+            </div>
+        `;
+        printSec.style.display = 'block';
+        window.print();
+        printSec.style.display = 'none';
+    }
+
+    async function deleteItem(eqId) {
+        const pin = prompt(`กรอก Admin Action PIN เพื่อยืนยันการลบ ${eqId}:`);
+        if (!pin) return;
+
+        const formData = new FormData();
+        formData.append("eq_id", eqId);
+        formData.append("pin", pin);
+        formData.append("token", localStorage.getItem('token'));
+
+        const res = await fetch('/api/equipment/delete', { method: 'POST', body: formData });
+        const data = await res.json();
+        alert(data.message);
+        if (data.success) loadDashboard();
+    }
+
+    async function editItem(eqId, oldName) {
+        const newName = prompt(`แก้ไขชื่ออุปกรณ์ (${eqId}):`, oldName);
+        if (!newName || newName === oldName) return;
+
+        const pin = prompt("กรอก Admin Action PIN เพื่อยืนยันการแก้ไข:");
+        if (!pin) return;
+
+        const formData = new FormData();
+        formData.append("eq_id", eqId);
+        formData.append("name", newName);
+        formData.append("pin", pin);
+        formData.append("token", localStorage.getItem('token'));
+
+        const res = await fetch('/api/equipment/edit', { method: 'POST', body: formData });
+        const data = await res.json();
+        alert(data.message);
+        if (data.success) loadDashboard();
+    }
+
+    async function addEquipment() {
+        const pin = document.getElementById('addEqPin').value;
+        const eqId = document.getElementById('addEqId').value;
+        const name = document.getElementById('addEqName').value;
+
+        if (!pin || !eqId || !name) { alert("กรอกข้อมูลให้ครบถ้วน!"); return; }
+
+        const formData = new FormData();
+        formData.append("eq_id", eqId);
+        formData.append("name", name);
+        formData.append("admin_pin", pin);
+
+        const res = await fetch('/api/register_equipment', { method: 'POST', body: formData });
+        const data = await res.json();
+        alert(data.message);
+        if (data.success) loadDashboard();
+    }
+
+    async function changeAdminPin() {
+        const oldP = document.getElementById('oldPinInput').value;
+        const newP = document.getElementById('newPinInput').value;
+
+        if (!oldP || !newP) { alert("กรอกข้อมูลให้ครบ!"); return; }
+
+        const formData = new FormData();
+        formData.append("old_pin", oldP);
+        formData.append("new_pin", newP);
+
+        const res = await fetch('/api/change_admin_pin', { method: 'POST', body: formData });
+        const data = await res.json();
+        alert(data.message);
+        if (data.success) loadDashboard();
+    }
+
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    async function loadDashboard() {
+        if (!isLoggedIn) return;
+
+        const y = document.getElementById('filterYear').value;
+        const m = document.getElementById('filterMonth').value;
+        const d = document.getElementById('filterDay').value;
+
+        const res = await fetch(`/api/dashboard_data?year=${y}&month=${m}&day=${d}`);
+        const data = await res.json();
+        
+        let eqHtml = "";
+        data.equipments.forEach(e => {
+            const isAvail = e.status === "AVAILABLE";
+            eqHtml += `
+            <div class="item-card">
+                <div class="item-header">
+                    <div>
+                        <b style="font-size:15px; color:var(--accent-color);">${e.id}</b> - ${e.name}<br>
+                        <span class="badge ${isAvail ? 'badge-avail' : 'badge-borrowed'}" style="margin-top:6px; display:inline-block;">
+                            ${isAvail ? 'ว่าง' : 'ถูกยืม'}
+                        </span>
+                    </div>
+                    <div>
+                        <button onclick="editItem('${e.id}', '${e.name}')" style="background:none; border:none; color:var(--accent-color); margin-right:8px; cursor:pointer;">✏️</button>
+                        <button onclick="deleteItem('${e.id}')" style="background:none; border:none; color:var(--danger-color); cursor:pointer;">🗑️</button>
+                    </div>
+                </div>
+                
+                <!-- QR Code Tag Container -->
+                <div class="qrcode-box">
+                    <img src="${e.qrcode}" class="qrcode-img" alt="QR Code ${e.id}">
+                    <div class="qrcode-text">${e.id}</div>
+                </div>
+                <button class="btn btn-secondary" onclick="printQrTag('${e.id}', '${e.name}', '${e.qrcode}')" style="margin-top:8px; padding:6px; font-size:12px;">🖨️ พิมพ์ Tag QR Code</button>
+            </div>`;
+        });
+        document.getElementById('equipmentList').innerHTML = eqHtml || "<small style='color:#6b7280;'>ยังไม่มีอุปกรณ์</small>";
+
+        let logHtml = "";
+        data.logs.forEach(l => {
+            logHtml += `<div>[${l.timestamp}] <b style="color:var(--accent-color);">${l.eq_id}</b> (${l.username}): ${l.details}</div><hr style="border-color:#1f2937; margin:6px 0;">`;
+        });
+        document.getElementById('logBox').innerHTML = logHtml || "<div style='color:#6b7280; text-align:center;'>ไม่พบประวัติการใช้งานตามตัวกรอง</div>";
+    }
+</script>
+</body>
+</html>

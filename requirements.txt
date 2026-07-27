@@ -1,1 +1,6 @@
-fastapi, uvicorn, jinja2, pydantic, pyjwt, python-multipart
+fastapi
+uvicorn
+jinja2
+pydantic
+pyjwt
+python-multipart

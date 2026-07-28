@@ -59,7 +59,7 @@ def add_log(username, eq_id, action, details):
         "timestamp": now_str,
         "username": username,
         "eq_id": eq_id,
-        "action": action, # 'CHECKOUT', 'CHECKIN', 'SYSTEM'
+        "action": action, # 'CHECKOUT', 'CHECKIN', 'SYSTEM', 'LOGIN'
         "details": details
     })
     save_json(LOGS_FILE, logs)
@@ -90,6 +90,10 @@ def login():
     if user:
         token = secrets.token_hex(16)
         tokens[token] = username
+        
+        # 🟢 เพิ่มการบันทึก Log เมื่อเข้าสู่ระบบสำเร็จ
+        add_log(username, "-", "LOGIN", "เข้าสู่ระบบสำเร็จ")
+        
         return jsonify({'success': True, 'token': token, 'username': username})
     return jsonify({'success': False, 'message': 'Username หรือ Password ไม่ถูกต้อง'}), 401
 
@@ -103,6 +107,10 @@ def register():
     
     users.append({"username": u, "password": p, "name": n})
     save_json(USERS_FILE, users)
+    
+    # 🟢 บันทึก Log เมื่อลงทะเบียนผู้ใช้ใหม่
+    add_log(u, "-", "SYSTEM", f"ลงทะเบียนผู้ใช้งานใหม่: {n}")
+    
     return jsonify({'success': True, 'message': 'ลงทะเบียนสำเร็จ'})
 
 @app.route('/api/change_username', methods=['POST'])
@@ -171,6 +179,9 @@ def register_equipment():
     equipments.append({"id": eq_id, "name": name, "status": "AVAILABLE", "qrcode": qr_b64})
     save_json(EQUIPMENT_FILE, equipments)
     
+    # 🟢 บันทึก Log เมื่อเพิ่มอุปกรณ์
+    add_log("ADMIN", eq_id, "SYSTEM", f"เพิ่มอุปกรณ์ใหม่: {name}")
+    
     return jsonify({'success': True, 'message': f'เพิ่มอุปกรณ์ {name} ({eq_id}) เรียบร้อยแล้ว'})
 
 @app.route('/api/equipment/edit', methods=['POST'])
@@ -186,8 +197,13 @@ def edit_equipment():
     eq = next((e for e in equipments if e['id'] == eq_id), None)
     if not eq: return jsonify({'success': False, 'message': 'ไม่พบอุปกรณ์'}), 404
     
+    old_name = eq.get('name', '')
     eq['name'] = new_name
     save_json(EQUIPMENT_FILE, equipments)
+    
+    # 🟢 บันทึก Log เมื่อแก้ไขอุปกรณ์
+    add_log("ADMIN", eq_id, "SYSTEM", f"แก้ไขชื่ออุปกรณ์จาก {old_name} เป็น {new_name}")
+    
     return jsonify({'success': True, 'message': 'แก้ไขข้อมูลอุปกรณ์เรียบร้อย'})
 
 @app.route('/api/equipment/delete', methods=['POST'])
@@ -200,6 +216,10 @@ def delete_equipment():
     equipments = load_json(EQUIPMENT_FILE, [])
     equipments = [e for e in equipments if e['id'] != eq_id]
     save_json(EQUIPMENT_FILE, equipments)
+    
+    # 🟢 บันทึก Log เมื่อลบอุปกรณ์
+    add_log("ADMIN", eq_id, "SYSTEM", f"ลบอุปกรณ์ออกจากระบบ")
+    
     return jsonify({'success': True, 'message': 'ลบอุปกรณ์เรียบร้อย'})
 
 @app.route('/api/checkout', methods=['POST'])
@@ -282,6 +302,10 @@ def change_admin_pin():
 
     config['admin_pin'] = new_pin
     save_json(CONFIG_FILE, config)
+    
+    # 🟢 บันทึก Log เมื่อเปลี่ยน Admin PIN
+    add_log("ADMIN", "-", "SYSTEM", "เปลี่ยนรหัส Admin PIN")
+    
     return jsonify({'success': True, 'message': 'เปลี่ยน Admin PIN สำเร็จ'})
 
 @app.route('/api/dashboard_data', methods=['GET'])

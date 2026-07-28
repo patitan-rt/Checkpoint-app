@@ -30,12 +30,10 @@
             <form id="authForm" onsubmit="handleAuth(event)" class="w-full space-y-4">
                 <div>
                     <label class="block text-xs font-semibold text-gray-700 mb-1">ชื่อผู้ใช้งาน (Username)</label>
-                    <!-- เอา placeholder="main" ออกแล้ว -->
                     <input type="text" id="username" required class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-700 mb-1">รหัสผ่าน (Password)</label>
-                    <!-- เอา placeholder="••••" ออกแล้ว -->
                     <input type="password" id="password" required class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition">
                 </div>
 
@@ -59,13 +57,14 @@
 
     <!-- Main App Section -->
     <div id="appContainer" class="hidden min-h-screen flex-col bg-gray-100 pb-20">
-        <!-- Top Bar (ไม่มีป้ายบอก User แล้ว) -->
+        <!-- Top Bar (นำการแสดงผล User กลับมาตามเดิม) -->
         <div class="bg-indigo-600 text-white px-4 py-3 shadow-md flex justify-between items-center sticky top-0 z-20">
             <div class="flex items-center space-x-2">
                 <span class="text-xl">📦</span>
                 <h1 class="font-bold text-sm sm:text-base">ระบบยืม-คืนอุปกรณ์</h1>
             </div>
-            <div>
+            <div class="flex items-center space-x-3">
+                <span id="sideUser" class="text-xs font-medium bg-indigo-700/80 px-3 py-1 rounded-full border border-indigo-500">👤 User</span>
                 <button onclick="logout()" class="text-xs bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-full font-medium transition shadow-sm">ออกจากระบบ</button>
             </div>
         </div>
@@ -89,7 +88,7 @@
                 </div>
             </div>
 
-            <!-- Tab 2: หน้าสินค้าถูกยืม (สแกนคืน) -->
+            <!-- Tab 2: หน้าสินค้าถูกยืม (สแกนคืน + แสดงวันเวลา/คนขับ/ทะเบียนรถ) -->
             <div id="returnView" class="tab-content hidden space-y-4">
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
                     <div class="flex flex-col sm:flex-row justify-between items-center gap-3 mb-4">
@@ -131,38 +130,111 @@
                 </div>
             </div>
 
-            <!-- Tab 4: แท็บ Log สินค้า -->
+            <!-- Tab 4: แท็บ Log การยืม-คืน + Log ของ Operator -->
             <div id="logView" class="tab-content hidden space-y-4">
-                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                    <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-4">
-                        <h2 class="font-bold text-base text-gray-800 flex items-center gap-2">
-                            <span>📜</span> ประวัติการยืม-คืนสินค้า (Logs)
-                        </h2>
-                        <!-- Filter Data -->
-                        <div class="flex items-center space-x-1">
-                            <input type="number" id="filterYearTrans" placeholder="ปี (YYYY)" class="w-20 px-2 py-1 text-xs border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
-                            <input type="number" id="filterMonthTrans" placeholder="เดือน (MM)" class="w-20 px-2 py-1 text-xs border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
-                            <input type="number" id="filterDayTrans" placeholder="วัน (DD)" class="w-16 px-2 py-1 text-xs border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
-                            <button onclick="loadDashboard()" class="bg-indigo-600 text-white px-3 py-1 text-xs rounded-lg hover:bg-indigo-700 transition">ค้นหา</button>
-                            <button onclick="clearDateFilter()" class="bg-gray-100 text-gray-600 px-2 py-1 text-xs rounded-lg hover:bg-gray-200 transition" title="ล้างค่าทั้งหมด">ทั้งหมด</button>
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-6">
+                    
+                    <!-- Sub-Log 1: ประวัติการยืม-คืน -->
+                    <div>
+                        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-3">
+                            <h2 class="font-bold text-sm sm:text-base text-gray-800 flex items-center gap-2">
+                                <span>📜</span> ประวัติการยืม-คืนสินค้า (Transaction Logs)
+                            </h2>
+                            <div class="flex items-center space-x-1">
+                                <input type="number" id="filterYearTrans" placeholder="YYYY" class="w-16 px-2 py-1 text-xs border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                                <input type="number" id="filterMonthTrans" placeholder="MM" class="w-14 px-2 py-1 text-xs border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                                <input type="number" id="filterDayTrans" placeholder="DD" class="w-12 px-2 py-1 text-xs border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                                <button onclick="loadDashboard()" class="bg-indigo-600 text-white px-2.5 py-1 text-xs rounded-lg hover:bg-indigo-700 transition">ค้นหา</button>
+                                <button onclick="clearDateFilter()" class="bg-gray-100 text-gray-600 px-2 py-1 text-xs rounded-lg hover:bg-gray-200 transition">ทั้งหมด</button>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-xs whitespace-nowrap">
+                                <thead>
+                                    <tr class="bg-slate-50 border-b border-gray-200 text-gray-600">
+                                        <th class="p-3">วัน/เวลา ยืม</th>
+                                        <th class="p-3">วัน/เวลา คืน</th>
+                                        <th class="p-3">ชื่อสินค้า (Tag)</th>
+                                        <th class="p-3">ทะเบียนรถ</th>
+                                        <th class="p-3">ชื่อคนขับ</th>
+                                        <th class="p-3">ผู้ทำรายการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="transLogTableBody" class="divide-y divide-gray-100"></tbody>
+                            </table>
                         </div>
                     </div>
 
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse text-xs whitespace-nowrap">
-                            <thead>
-                                <tr class="bg-slate-50 border-b border-gray-200 text-gray-600">
-                                    <th class="p-3">วัน/เดือน/ปี เวลา ยืม</th>
-                                    <th class="p-3">วัน/เดือน/ปี เวลา คืน</th>
-                                    <th class="p-3">ชื่อสินค้า (Tag QR)</th>
-                                    <th class="p-3">ทะเบียนรถ</th>
-                                    <th class="p-3">ชื่อคนขับ</th>
-                                    <th class="p-3">ผู้ทำรายการ</th>
-                                </tr>
-                            </thead>
-                            <tbody id="transLogTableBody" class="divide-y divide-gray-100"></tbody>
-                        </table>
+                    <hr class="border-gray-100">
+
+                    <!-- Sub-Log 2: ประวัติ Operator (Login, Logout, Change User/Pass/PIN) -->
+                    <div>
+                        <h2 class="font-bold text-sm sm:text-base text-gray-800 mb-3 flex items-center gap-2">
+                            <span>🛡️</span> ประวัติกิจกรรมผู้ใช้งานระบบ (Operator Activity Logs)
+                        </h2>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-xs whitespace-nowrap">
+                                <thead>
+                                    <tr class="bg-slate-50 border-b border-gray-200 text-gray-600">
+                                        <th class="p-3">วัน/เดือน/ปี เวลา</th>
+                                        <th class="p-3">ผู้ใช้งาน (User)</th>
+                                        <th class="p-3">กิจกรรม (Action)</th>
+                                        <th class="p-3">รายละเอียดเพิ่มเติม</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="operatorLogTableBody" class="divide-y divide-gray-100"></tbody>
+                            </table>
+                        </div>
                     </div>
+
+                </div>
+            </div>
+
+            <!-- Tab 5: แท็บตั้งค่า (เปลี่ยน User, Pass, Admin PIN) -->
+            <div id="settingsView" class="tab-content hidden space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
+                    
+                    <!-- เปลี่ยน Username / Password -->
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+                        <h2 class="font-bold text-sm text-gray-800 flex items-center gap-2 border-b pb-2">
+                            <span>👤</span> เปลี่ยนชื่อผู้ใช้ และ รหัสผ่าน
+                        </h2>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Username ใหม่</label>
+                            <input type="text" id="newUsernameInput" placeholder="เว้นว่างไว้หากไม่ต้องการเปลี่ยน" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Password ปัจจุบัน</label>
+                            <input type="password" id="currentPasswordInput" required placeholder="ระบุเพื่อยืนยัน" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Password ใหม่</label>
+                            <input type="password" id="newPasswordInput" placeholder="เว้นว่างไว้หากไม่ต้องการเปลี่ยน" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                        </div>
+                        <button onclick="updateAccountSettings()" class="w-full bg-indigo-600 text-white py-2.5 rounded-xl text-xs font-semibold hover:bg-indigo-700 transition shadow-sm">
+                            บันทึกการเปลี่ยนแปลงบัญชี
+                        </button>
+                    </div>
+
+                    <!-- เปลี่ยน Admin PIN สำหรับจัดการของ -->
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+                        <h2 class="font-bold text-sm text-gray-800 flex items-center gap-2 border-b pb-2">
+                            <span>🔑</span> เปลี่ยน Admin PIN (สิทธิ์เพิ่ม/ลบของ)
+                        </h2>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Admin PIN ปัจจุบัน</label>
+                            <input type="password" id="currentPinInput" required placeholder="ระบุ PIN เดิม" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Admin PIN ใหม่</label>
+                            <input type="password" id="newPinInput" required placeholder="ระบุ PIN ใหม่" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                        </div>
+                        <button onclick="updateAdminPin()" class="w-full bg-slate-800 text-white py-2.5 rounded-xl text-xs font-semibold hover:bg-slate-900 transition shadow-sm">
+                            อัปเดต Admin PIN
+                        </button>
+                    </div>
+
                 </div>
             </div>
 
@@ -184,7 +256,11 @@
             </button>
             <button id="nav-logView" onclick="switchTab('logView')" class="nav-btn flex flex-col items-center text-gray-400">
                 <span class="text-xl">📜</span>
-                <span class="text-[10px] font-semibold mt-0.5">Log สินค้า</span>
+                <span class="text-[10px] font-semibold mt-0.5">Log สถิติ</span>
+            </button>
+            <button id="nav-settingsView" onclick="switchTab('settingsView')" class="nav-btn flex flex-col items-center text-gray-400">
+                <span class="text-xl">⚙️</span>
+                <span class="text-[10px] font-semibold mt-0.5">ตั้งค่ารหัส</span>
             </button>
         </div>
     </div>
@@ -198,7 +274,7 @@
         </div>
     </div>
 
-    <!-- Modal กรอกข้อมูลการยืม (Vehicle Details) -->
+    <!-- Modal กรอกข้อมูลการยืม -->
     <div id="vehicleModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
         <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl space-y-4">
             <h3 class="text-base font-bold text-gray-800 flex items-center gap-2">
@@ -228,12 +304,10 @@
         let cachedEquipments = [];
 
         window.onload = function() {
-            // ตั้งค่าเริ่มต้นวันที่ปัจจุบันในช่อง Filter
             setDefaultCurrentDate();
             checkAuth();
         };
 
-        // ตั้งค่า Default วัน/เดือน/ปี เป็น ปัจจุบัน
         function setDefaultCurrentDate() {
             const today = new Date();
             document.getElementById('filterYearTrans').value = today.getFullYear();
@@ -241,7 +315,6 @@
             document.getElementById('filterDayTrans').value = String(today.getDate()).padStart(2, '0');
         }
 
-        // ปุ่มสำหรับล้างค่าเพื่อดู Log ทั้งหมด
         function clearDateFilter() {
             document.getElementById('filterYearTrans').value = '';
             document.getElementById('filterMonthTrans').value = '';
@@ -251,11 +324,13 @@
 
         function checkAuth() {
             const token = localStorage.getItem('token');
+            const username = localStorage.getItem('username');
             if (token) {
                 document.getElementById('authContainer').classList.add('hidden');
                 document.getElementById('authContainer').classList.remove('flex');
                 document.getElementById('appContainer').classList.remove('hidden');
                 document.getElementById('appContainer').classList.add('flex');
+                document.getElementById('sideUser').innerText = `👤 ${username}`;
                 loadDashboard();
             } else {
                 document.getElementById('authContainer').classList.remove('hidden');
@@ -332,8 +407,15 @@
         }
 
         function logout() {
-            localStorage.clear();
-            checkAuth();
+            const token = localStorage.getItem('token');
+            fetch('/api/logout', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ token: token })
+            }).finally(() => {
+                localStorage.clear();
+                checkAuth();
+            });
         }
 
         function switchTab(tabId) {
@@ -467,6 +549,71 @@
             });
         }
 
+        function updateAccountSettings() {
+            const token = localStorage.getItem('token');
+            const newUsername = document.getElementById('newUsernameInput').value;
+            const currentPassword = document.getElementById('currentPasswordInput').value;
+            const newPassword = document.getElementById('newPasswordInput').value;
+
+            if (!currentPassword) {
+                alert('กรุณากรอก Password ปัจจุบันเพื่อยืนยัน');
+                return;
+            }
+
+            fetch('/api/user/update_profile', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    token: token,
+                    new_username: newUsername,
+                    current_password: currentPassword,
+                    new_password: newPassword
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                alert(data.message);
+                if (data.success) {
+                    if (newUsername) {
+                        localStorage.setItem('username', newUsername);
+                        document.getElementById('sideUser').innerText = `👤 ${newUsername}`;
+                    }
+                    document.getElementById('newUsernameInput').value = '';
+                    document.getElementById('currentPasswordInput').value = '';
+                    document.getElementById('newPasswordInput').value = '';
+                }
+            });
+        }
+
+        function updateAdminPin() {
+            const token = localStorage.getItem('token');
+            const currentPin = document.getElementById('currentPinInput').value;
+            const newPin = document.getElementById('newPinInput').value;
+
+            if (!currentPin || !newPin) {
+                alert('กรุณากรอกข้อมูล PIN ให้ครบถ้วน');
+                return;
+            }
+
+            fetch('/api/user/update_admin_pin', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    token: token,
+                    current_pin: currentPin,
+                    new_pin: newPin
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                alert(data.message);
+                if (data.success) {
+                    document.getElementById('currentPinInput').value = '';
+                    document.getElementById('newPinInput').value = '';
+                }
+            });
+        }
+
         function loadDashboard() {
             const yTrans = document.getElementById('filterYearTrans').value || '';
             const mTrans = document.getElementById('filterMonthTrans').value || '';
@@ -477,7 +624,7 @@
             .then(data => {
                 cachedEquipments = data.equipments || [];
                 renderEquipmentLists(cachedEquipments);
-                renderLogs(data.logs || []);
+                renderLogs(data.logs || [], data.operator_logs || []);
             });
         }
 
@@ -514,6 +661,7 @@
             const available = equipments.filter(e => e.status === 'AVAILABLE');
             const borrowed = equipments.filter(e => e.status === 'BORROWED');
 
+            // แสดงหน้ายืมสินค้า
             availableContainer.innerHTML = available.length === 0 ? 
                 '<p class="text-xs text-gray-400 text-center col-span-2 py-8">ไม่มีสินค้าว่างพร้อมยืม</p>' : 
                 available.map(e => `
@@ -534,32 +682,57 @@
                     </div>
                 `).join('');
 
+            // แสดงหน้าสินค้าถูกยืม (แสดงข้อมูลวันเวลา, ทะเบียนรถ, ชื่อคนขับ ยืมโดยใคร แบบละเอียด)
             borrowedContainer.innerHTML = borrowed.length === 0 ? 
                 '<p class="text-xs text-gray-400 text-center col-span-2 py-8">ไม่มีสินค้าที่กำลังถูกยืม</p>' : 
                 borrowed.map(e => `
-                    <div class="border border-red-100 rounded-xl p-3 flex justify-between items-center bg-white shadow-sm hover:border-red-200 transition">
-                        <div class="flex items-center space-x-3">
-                            ${e.qrcode ? `<img src="${e.qrcode}" class="w-12 h-12 rounded-lg border p-0.5 bg-white shadow-xs shrink-0" />` : ''}
-                            <div>
-                                <div class="font-bold text-xs text-gray-800">${e.name}</div>
-                                <div class="text-[10px] font-mono text-gray-500">Tag: ${e.id}</div>
-                                <button onclick="printQRCode('${e.id}', '${e.name}', '${e.qrcode}')" class="text-[10px] text-indigo-600 hover:underline font-semibold mt-0.5 flex items-center gap-1">
-                                    🖨️ พิมพ์ QR
-                                </button>
+                    <div class="border border-red-200 rounded-2xl p-4 bg-white shadow-sm hover:border-red-300 transition space-y-3">
+                        <div class="flex justify-between items-start">
+                            <div class="flex items-center space-x-3">
+                                ${e.qrcode ? `<img src="${e.qrcode}" class="w-12 h-12 rounded-lg border p-0.5 bg-white shadow-xs shrink-0" />` : ''}
+                                <div>
+                                    <div class="font-bold text-xs text-gray-800">${e.name}</div>
+                                    <div class="text-[10px] font-mono text-gray-500">Tag: ${e.id}</div>
+                                    <button onclick="printQRCode('${e.id}', '${e.name}', '${e.qrcode}')" class="text-[10px] text-indigo-600 hover:underline font-semibold mt-0.5 flex items-center gap-1">
+                                        🖨️ พิมพ์ QR
+                                    </button>
+                                </div>
+                            </div>
+                            <button onclick="confirmCheckin('${e.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] px-3 py-1.5 rounded-lg font-medium transition shadow-sm shrink-0">
+                                คืนรายการนี้
+                            </button>
+                        </div>
+                        
+                        <!-- ส่วนแสดงข้อมูลการยืมเชิงลึก -->
+                        <div class="bg-slate-50 p-2.5 rounded-xl text-[11px] space-y-1 text-gray-600 border border-slate-100">
+                            <div class="flex justify-between">
+                                <span class="text-gray-400">📅 เวลาที่ยืม:</span>
+                                <span class="font-mono font-medium text-gray-800">${e.borrowed_at || '-'}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-400">🚚 ทะเบียนรถ:</span>
+                                <span class="font-semibold text-indigo-600">${e.plate_number || '-'}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-400">👤 ชื่อคนขับ:</span>
+                                <span class="font-medium text-gray-800">${e.driver_name || '-'}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-400">🔑 ยืมโดย Operator:</span>
+                                <span class="text-gray-700">${e.borrowed_by || '-'}</span>
                             </div>
                         </div>
-                        <button onclick="confirmCheckin('${e.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] px-3 py-1.5 rounded-lg font-medium transition shadow-sm shrink-0">
-                            คืนรายการนี้
-                        </button>
                     </div>
                 `).join('');
         }
 
-        function renderLogs(logs) {
+        function renderLogs(logs, operatorLogs) {
             const transBody = document.getElementById('transLogTableBody');
+            const opBody = document.getElementById('operatorLogTableBody');
 
+            // Render Transaction Logs
             transBody.innerHTML = logs.length === 0 ? 
-                '<tr><td colspan="6" class="p-4 text-center text-gray-400 text-xs">ไม่พบประวัติการทำรายการตามช่วงวันที่เลือก</td></tr>' :
+                '<tr><td colspan="6" class="p-4 text-center text-gray-400 text-xs">ไม่พบประวัติการยืม-คืนตามวันที่เลือก</td></tr>' :
                 logs.map(l => {
                     let plate = '-', driver = '-';
                     if (l.details && l.details.includes('Plate:')) {
@@ -586,6 +759,26 @@
                         </tr>
                     `;
                 }).join('');
+
+            // Render Operator Activity Logs
+            opBody.innerHTML = (!operatorLogs || operatorLogs.length === 0) ? 
+                '<tr><td colspan="4" class="p-4 text-center text-gray-400 text-xs">ไม่พบประวัติกิจกรรมของ Operator</td></tr>' :
+                operatorLogs.map(o => `
+                    <tr class="hover:bg-gray-50/80 transition">
+                        <td class="p-3 text-gray-700 font-mono">${o.timestamp}</td>
+                        <td class="p-3 font-semibold text-indigo-600">${o.username}</td>
+                        <td class="p-3">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${
+                                o.action === 'LOGIN' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' :
+                                o.action === 'LOGOUT' ? 'bg-gray-100 text-gray-600 border border-gray-200' :
+                                'bg-amber-50 text-amber-600 border border-amber-200'
+                            }">
+                                ${o.action}
+                            </span>
+                        </td>
+                        <td class="p-3 text-gray-600">${o.details || '-'}</td>
+                    </tr>
+                `).join('');
         }
     </script>
 </body>

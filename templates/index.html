@@ -40,9 +40,11 @@
 </head>
 <body class="bg-slate-100 min-h-screen select-none">
 
-    <!-- ==================== SECTION 1: LOGIN PAGE ==================== -->
-    <div id="loginSection" class="min-h-screen flex items-center justify-center p-4 bg-slate-900">
-        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 sm:p-8 space-y-6">
+    <!-- ==================== SECTION 1: AUTH SECTION (LOGIN / REGISTER) ==================== -->
+    <div id="authSection" class="min-h-screen flex items-center justify-center p-4 bg-slate-900">
+        
+        <!-- 1.1 LOGIN CARD -->
+        <div id="loginCard" class="bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 sm:p-8 space-y-6">
             <div class="text-center space-y-2">
                 <div class="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl mb-2 text-3xl">
                     📦
@@ -55,13 +57,13 @@
                 <div>
                     <label class="block text-xs font-semibold text-gray-700 mb-1">ชื่อผู้ใช้งาน (Username)</label>
                     <input type="text" id="loginUsername" required placeholder="กรอกชื่อผู้ใช้งาน" 
-                           class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm outline-none transition">
+                           class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 text-sm outline-none transition">
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-gray-700 mb-1">รหัสผ่าน (Password)</label>
                     <input type="password" id="loginPassword" required placeholder="กรอกรหัสผ่าน" 
-                           class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm outline-none transition">
+                           class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 text-sm outline-none transition">
                 </div>
 
                 <div id="loginError" class="hidden text-red-500 text-xs text-center font-medium bg-red-50 p-2.5 rounded-lg border border-red-200"></div>
@@ -70,7 +72,59 @@
                     เข้าสู่ระบบ
                 </button>
             </form>
+
+            <div class="text-center pt-2 border-t border-gray-100">
+                <p class="text-xs text-gray-500">
+                    ยังไม่มีบัญชีใช้งาน? 
+                    <button onclick="toggleAuthMode('register')" class="text-indigo-600 font-bold hover:underline">สมัครสมาชิกที่นี่</button>
+                </p>
+            </div>
         </div>
+
+        <!-- 1.2 REGISTER CARD -->
+        <div id="registerCard" class="hidden bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 sm:p-8 space-y-6">
+            <div class="text-center space-y-2">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl mb-2 text-3xl">
+                    📝
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800">สมัครสมาชิก</h2>
+                <p class="text-xs text-gray-500">สร้างบัญชีผู้ใช้งานใหม่เพื่อเข้าใช้ระบบ</p>
+            </div>
+
+            <form onsubmit="handleRegister(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">ชื่อผู้ใช้งาน (Username)</label>
+                    <input type="text" id="regUsername" required placeholder="ตั้งชื่อผู้ใช้งาน" 
+                           class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 text-sm outline-none transition">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">รหัสผ่าน (Password)</label>
+                    <input type="password" id="regPassword" required placeholder="ตั้งรหัสผ่าน" 
+                           class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 text-sm outline-none transition">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">ยืนยันรหัสผ่าน (Confirm Password)</label>
+                    <input type="password" id="regConfirmPassword" required placeholder="กรอกรหัสผ่านอีกครั้ง" 
+                           class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 text-sm outline-none transition">
+                </div>
+
+                <div id="regError" class="hidden text-red-500 text-xs text-center font-medium bg-red-50 p-2.5 rounded-lg border border-red-200"></div>
+
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-semibold py-3 rounded-xl text-sm shadow-md transition">
+                    ลงทะเบียน
+                </button>
+            </form>
+
+            <div class="text-center pt-2 border-t border-gray-100">
+                <p class="text-xs text-gray-500">
+                    มีบัญชีอยู่แล้ว? 
+                    <button onclick="toggleAuthMode('login')" class="text-emerald-600 font-bold hover:underline">เข้าสู่ระบบ</button>
+                </p>
+            </div>
+        </div>
+
     </div>
 
 
@@ -127,10 +181,27 @@
                 </div>
             </section>
 
-            <!-- View 2: Equipment List -->
+            <!-- View 2: Equipment List (แยกแท็บสถานะ) -->
             <section id="equipView" class="tab-content hidden space-y-3">
-                <h3 class="text-sm font-bold text-gray-700 px-1">อุปกรณ์ทั้งหมดในระบบ</h3>
-                <div id="allEquipmentList" class="space-y-3"></div>
+                <div class="flex justify-between items-center px-1">
+                    <h3 class="text-sm font-bold text-gray-700">รายการอุปกรณ์ทั้งหมด</h3>
+                </div>
+
+                <!-- Sub-tabs แยกสถานะ -->
+                <div class="flex bg-gray-200 p-1 rounded-xl text-xs font-semibold">
+                    <button onclick="switchEquipFilter('ALL')" id="filterBtn-ALL" class="flex-1 py-2 text-center rounded-lg bg-white shadow text-gray-800 transition">
+                        ทั้งหมด
+                    </button>
+                    <button onclick="switchEquipFilter('BORROWED')" id="filterBtn-BORROWED" class="flex-1 py-2 text-center rounded-lg text-gray-500 transition">
+                        🔴 ถูกยืมอยู่
+                    </button>
+                    <button onclick="switchEquipFilter('AVAILABLE')" id="filterBtn-AVAILABLE" class="flex-1 py-2 text-center rounded-lg text-gray-500 transition">
+                        🟢 ว่างพร้อมใช้
+                    </button>
+                </div>
+
+                <!-- List Content -->
+                <div id="allEquipmentList" class="space-y-3 pt-1"></div>
             </section>
 
             <!-- View 3: Add Equipment -->
@@ -182,25 +253,7 @@
                 </div>
             </section>
 
-            <!-- View 5: System Logs -->
-            <section id="opLogView" class="tab-content hidden bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3">
-                <h3 class="text-base font-bold text-gray-800">🛡️ System Logs</h3>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-xs whitespace-nowrap">
-                        <thead>
-                            <tr class="bg-slate-100 text-slate-600 border-b">
-                                <th class="p-2">เวลา</th>
-                                <th class="p-2">ผู้ใช้</th>
-                                <th class="p-2">แอคชั่น</th>
-                                <th class="p-2">รายละเอียด</th>
-                            </tr>
-                        </thead>
-                        <tbody id="opLogTableBody" class="divide-y divide-gray-100"></tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- View 6: Settings -->
+            <!-- View 5: Settings -->
             <section id="settingsView" class="tab-content hidden space-y-4">
                 <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3">
                     <h3 class="text-sm font-bold text-gray-800 border-b pb-2">เปลี่ยน Username</h3>
@@ -291,6 +344,7 @@
         let currentMode = null;
         let scannedEqId = null;
         let cachedEquipments = [];
+        let currentEquipFilter = 'ALL';
 
         document.addEventListener('DOMContentLoaded', () => {
             checkAuth();
@@ -301,13 +355,28 @@
             const username = localStorage.getItem('username');
 
             if (token) {
-                document.getElementById('loginSection').classList.add('hidden');
+                document.getElementById('authSection').classList.add('hidden');
                 document.getElementById('appSection').classList.remove('hidden');
                 document.getElementById('sideUser').innerText = `👤 ${username || 'User'}`;
                 loadDashboard();
             } else {
-                document.getElementById('loginSection').classList.remove('hidden');
+                document.getElementById('authSection').classList.remove('hidden');
                 document.getElementById('appSection').classList.add('hidden');
+            }
+        }
+
+        function toggleAuthMode(mode) {
+            const loginCard = document.getElementById('loginCard');
+            const registerCard = document.getElementById('registerCard');
+            document.getElementById('loginError').classList.add('hidden');
+            document.getElementById('regError').classList.add('hidden');
+
+            if (mode === 'register') {
+                loginCard.classList.add('hidden');
+                registerCard.classList.remove('hidden');
+            } else {
+                registerCard.classList.add('hidden');
+                loginCard.classList.remove('hidden');
             }
         }
 
@@ -341,6 +410,46 @@
             });
         }
 
+        function handleRegister(e) {
+            e.preventDefault();
+            const u = document.getElementById('regUsername').value;
+            const p = document.getElementById('regPassword').value;
+            const cp = document.getElementById('regConfirmPassword').value;
+            const errDiv = document.getElementById('regError');
+
+            errDiv.classList.add('hidden');
+
+            if (p !== cp) {
+                errDiv.innerText = 'รหัสผ่านทั้งสองช่องไม่ตรงกัน';
+                errDiv.classList.remove('hidden');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('username', u);
+            formData.append('password', p);
+
+            fetch('/api/register', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ');
+                    toggleAuthMode('login');
+                    document.getElementById('loginUsername').value = u;
+                } else {
+                    errDiv.innerText = data.message || 'ไม่สามารถลงทะเบียนได้';
+                    errDiv.classList.remove('hidden');
+                }
+            })
+            .catch(() => {
+                errDiv.innerText = 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์';
+                errDiv.classList.remove('hidden');
+            });
+        }
+
         function logout() {
             localStorage.clear();
             checkAuth();
@@ -361,6 +470,21 @@
             }
 
             if (tabId === 'equipView') renderAllEquipments();
+        }
+
+        function switchEquipFilter(filter) {
+            currentEquipFilter = filter;
+            ['ALL', 'BORROWED', 'AVAILABLE'].forEach(f => {
+                const btn = document.getElementById(`filterBtn-${f}`);
+                if (f === filter) {
+                    btn.classList.add('bg-white', 'shadow', 'text-gray-800');
+                    btn.classList.remove('text-gray-500');
+                } else {
+                    btn.classList.remove('bg-white', 'shadow', 'text-gray-800');
+                    btn.classList.add('text-gray-500');
+                }
+            });
+            renderAllEquipments();
         }
 
         function closeModal(modalId) {
@@ -485,6 +609,9 @@
                 cachedEquipments = data.equipments || [];
                 renderEquipmentLists(cachedEquipments);
                 renderLogs(data.logs || []);
+                if (!document.getElementById('equipView').classList.contains('hidden')) {
+                    renderAllEquipments();
+                }
             });
         }
 
@@ -518,11 +645,23 @@
         function renderAllEquipments() {
             const container = document.getElementById('allEquipmentList');
             if (!cachedEquipments || cachedEquipments.length === 0) {
-                container.innerHTML = '<p class="text-xs text-gray-400 text-center">ไม่พบอุปกรณ์</p>';
+                container.innerHTML = '<p class="text-xs text-gray-400 text-center py-4">ไม่พบอุปกรณ์ในระบบ</p>';
                 return;
             }
 
-            container.innerHTML = cachedEquipments.map(e => `
+            let filtered = cachedEquipments;
+            if (currentEquipFilter === 'BORROWED') {
+                filtered = cachedEquipments.filter(e => e.status === 'BORROWED');
+            } else if (currentEquipFilter === 'AVAILABLE') {
+                filtered = cachedEquipments.filter(e => e.status === 'AVAILABLE');
+            }
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<p class="text-xs text-gray-400 text-center py-4">ไม่มีรายการในหมวดหมู่นี้</p>';
+                return;
+            }
+
+            container.innerHTML = filtered.map(e => `
                 <div class="bg-white border rounded-xl p-3 flex items-center justify-between shadow-sm">
                     <div class="flex items-center space-x-3">
                         <img src="${e.qrcode}" class="w-12 h-12 rounded border p-1 bg-white" />
@@ -569,10 +708,7 @@
 
         function renderLogs(logs) {
             const transBody = document.getElementById('transLogTableBody');
-            const opBody = document.getElementById('opLogTableBody');
-
             const transLogs = logs.filter(l => l.action === 'CHECKOUT' || l.action === 'CHECKIN');
-            const opLogs = logs.filter(l => l.action === 'SYSTEM' || l.action === 'LOGIN');
 
             transBody.innerHTML = transLogs.length === 0 ? '<tr><td colspan="6" class="p-2 text-center text-gray-400">ไม่มีข้อมูล</td></tr>' :
                 transLogs.map(l => {
@@ -599,16 +735,6 @@
                         </tr>
                     `;
                 }).join('');
-
-            opBody.innerHTML = opLogs.length === 0 ? '<tr><td colspan="4" class="p-2 text-center text-gray-400">ไม่มีข้อมูล</td></tr>' :
-                opLogs.map(l => `
-                    <tr class="${l.action === 'LOGIN' ? 'bg-emerald-50' : ''}">
-                        <td class="p-2">${l.timestamp}</td>
-                        <td class="p-2">${l.username}</td>
-                        <td class="p-2 font-semibold">${l.action}</td>
-                        <td class="p-2">${l.details}</td>
-                    </tr>
-                `).join('');
         }
 
         function updateUsername() {

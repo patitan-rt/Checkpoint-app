@@ -184,7 +184,7 @@ def edit_equipment():
     equipments = load_json(EQUIPMENT_FILE, [])
     
     eq = next((e for e in equipments if e['id'] == eq_id), None)
-    if not eq: return jsonify({'success': False, 'message': 'ไม่พบอุปกรณ์'}), 444
+    if not eq: return jsonify({'success': False, 'message': 'ไม่พบอุปกรณ์'}), 404
     
     eq['name'] = new_name
     save_json(EQUIPMENT_FILE, equipments)
@@ -218,10 +218,38 @@ def checkout():
     if not eq: return jsonify({'success': False, 'message': 'ไม่พบรหัสอุปกรณ์ในระบบ'}), 404
     if eq['status'] == 'BORROWED': return jsonify({'success': False, 'message': 'อุปกรณ์นี้ถูกยืมไปแล้ว'}), 400
 
+    # -------------------------------------------------------------
+    # LOGIC CHECK: ตรวจสอบการยืมค้างของคนขับต่างทะเบียนรถ
+    # -------------------------------------------------------------
+    if driver != '-':
+        logs = load_json(LOGS_FILE, [])
+        active_borrows = {}
+        # วนลูป Logs จากอดีตมาปัจจุบัน เพื่อหาสถานะยืมค้างล่าสุด
+        for l in reversed(logs):
+            if l.get('action') in ['CHECKOUT', 'CHECKIN']:
+                det = l.get('details', '')
+                if 'Plate:' in det and 'Driver:' in det:
+                    p = det.split('Plate:')[1].split(',')[0].strip()
+                    d = det.split('Driver:')[1].strip()
+                    eid = l.get('eq_id')
+                    if l['action'] == 'CHECKOUT':
+                        active_borrows[eid] = {'driver': d, 'plate': p}
+                    elif l['action'] == 'CHECKIN' and eid in active_borrows:
+                        del active_borrows[eid]
+
+        # ค้นหาว่าคนขับคนนี้มีรายการยืมค้างในระบบอยู่หรือไม่
+        for e_id, info in active_borrows.items():
+            if info['driver'] == driver and info['plate'] != plate:
+                return jsonify({
+                    'success': False,
+                    'message': f"ไม่อนุญาต: คุณ {driver} มีรายการยืมอุปกรณ์ ({e_id}) ค้างอยู่ที่รถทะเบียน [{info['plate']}] โปรด คืนสินค้าเดิม ก่อนยืมด้วยรถทะเบียน [{plate}]"
+                }), 400
+
+    # บันทึกสถานะอุปกรณ์เป็น BORROWED
     eq['status'] = 'BORROWED'
     save_json(EQUIPMENT_FILE, equipments)
 
-    # บันทึกรูปแบบมาตรฐาน ชัดเจนสำหรับ Parse ลงตาราง Log
+    # บันทึกรูปแบบมาตรฐาน
     add_log(username, eq_id, "CHECKOUT", f"Checkout | Plate: {plate}, Driver: {driver}")
     return jsonify({'success': True, 'message': f'ยืมอุปกรณ์ {eq_id} สำเร็จ'})
 

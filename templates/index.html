@@ -46,7 +46,8 @@
         label { display: block; margin-bottom: 6px; font-size: 12px; color: #9ca3af; }
         input, select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: #030712; color: #fff; font-size: 14px; }
         
-        #reader { width: 100%; margin-top: 15px; border-radius: 8px; overflow: hidden; display: none; }
+        #reader-container { display: none; margin-top: 15px; position: relative; }
+        #reader { width: 100%; border-radius: 8px; overflow: hidden; background: #000; }
         
         .tab-content { display: none; }
         .tab-content.active { display: block; }
@@ -68,7 +69,6 @@
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); justify-content: center; align-items: center; z-index: 1000; }
         .modal-content { background: var(--card-bg); padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; border: 1px solid var(--border-color); }
 
-        /* Style สำหรับการสั่งพิมพ์ Tag QR Code ออกกระดาษ */
         @media print {
             body * { visibility: hidden; }
             #printSection, #printSection * { visibility: visible; }
@@ -121,7 +121,12 @@
         <div id="tab-equip" class="tab-content active">
             <button class="btn btn-checkout" onclick="startScan('CHECKOUT')">📷 สแกน QR Code ยืมอุปกรณ์ (Checkout)</button>
             <button class="btn btn-checkin" onclick="startScan('CHECKIN')">📷 สแกน QR Code คืนอุปกรณ์ (Checkin)</button>
-            <div id="reader"></div>
+            
+            <!-- Scanner Area Container -->
+            <div id="reader-container">
+                <div id="reader"></div>
+                <button class="btn btn-danger" onclick="stopScanner()" style="margin-top: 8px;">❌ ปิดกล้องสแกน</button>
+            </div>
 
             <h3 style="font-size: 14px; text-align: left; margin: 20px 0 10px; color: #9ca3af;">รายการอุปกรณ์ & QR Code Tags</h3>
             <div id="equipmentList">กำลังโหลด...</div>
@@ -233,7 +238,6 @@
     </div>
 </div>
 
-<!-- Div ซ่อนสำหรับใช้สั่งพิมพ์ Tag QR Code ออกกระดาษ -->
 <div id="printSection" style="display:none;"></div>
 
 <!-- Modal Register -->
@@ -280,7 +284,7 @@
 
     let currentMode = "";
     let scannedEqId = "";
-    let html5QrcodeScanner = null;
+    let html5QrCode = null;
     let isLoggedIn = false;
 
     window.addEventListener('DOMContentLoaded', () => {
@@ -316,6 +320,7 @@
 
     function switchTab(tabName, title) {
         if (!isLoggedIn) return;
+        stopScanner();
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.sidebar-menu li').forEach(el => el.classList.remove('active'));
         
@@ -357,6 +362,7 @@
     }
 
     function logout() {
+        stopScanner();
         localStorage.clear();
         location.reload();
     }
@@ -439,22 +445,58 @@
         }
     }
 
-    function startScan(mode) {
+    // --- ระบบสแกน QR Code แบบใหม่ (เสถียร + ล็อกกล้องหลัง) ---
+    async function startScan(mode) {
         currentMode = mode;
-        document.getElementById('reader').style.display = 'block';
-        if (!html5QrcodeScanner) {
-            html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 220 });
-            html5QrcodeScanner.render(onScanSuccess);
+        await stopScanner(); // เคลียร์ instance เก่าก่อนทุกครั้ง
+
+        document.getElementById('reader-container').style.display = 'block';
+        html5QrCode = new Html5Qrcode("reader");
+
+        const config = { fps: 10, qrbox: { width: 220, height: 220 } };
+
+        try {
+            const devices = await Html5Qrcode.getCameras();
+            if (devices && devices.length > 0) {
+                // ค้นหากล้องหลังโดยเช็กจาก label คำว่า back, rear, environment
+                let backCamera = devices.find(device => {
+                    const label = device.label.toLowerCase();
+                    return label.includes('back') || label.includes('rear') || label.includes('environment');
+                });
+
+                // ถ้าพบให้ใช้ ID ของกล้องหลัง ถ้าไม่พบใช้ตัวสุดท้ายใน list (ปกติมือถือกล้องหลังอยู่ท้ายสุด)
+                let cameraId = backCamera ? backCamera.id : devices[devices.length - 1].id;
+                await html5QrCode.start(cameraId, config, onScanSuccess);
+            } else {
+                await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
+            }
+        } catch (err) {
+            console.warn("Camera ID detection failed, falling back to facingMode:", err);
+            try {
+                await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
+            } catch (fallbackErr) {
+                alert("ไม่สามารถเปิดกล้องได้ กรุณาตรวจสอบการอนุญาตใช้งานกล้องบนเบราว์เซอร์");
+                stopScanner();
+            }
         }
+    }
+
+    async function stopScanner() {
+        if (html5QrCode) {
+            try {
+                await html5QrCode.stop();
+            } catch (e) {
+                console.log("Scanner stop state:", e);
+            }
+            html5QrCode = null;
+        }
+        const container = document.getElementById('reader-container');
+        if (container) container.style.display = 'none';
     }
 
     async function onScanSuccess(decodedText) {
         scannedEqId = decodedText;
-        if (html5QrcodeScanner) {
-            await html5QrcodeScanner.clear();
-            document.getElementById('reader').style.display = 'none';
-            html5QrcodeScanner = null;
-        }
+        await stopScanner(); // สแกนติดแล้วปิดสตรีมกล้องทันทีเพื่อคืน Memory
 
         if (currentMode === "CHECKOUT") {
             document.getElementById('modalEqId').innerText = scannedEqId;

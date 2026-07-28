@@ -71,7 +71,7 @@ def get_user_by_token(token):
 def index():
     return render_template('index.html')
 
-# 🟢 แก้ไข: Safe Handler สำหรับ manifest.json ป้องกัน 404
+# 🟢 Safe Handler สำหรับ manifest.json ป้องกัน 404
 @app.route('/manifest.json')
 def manifest():
     try:
@@ -86,7 +86,7 @@ def manifest():
             "theme_color": "#000000"
         })
 
-# 🟢 แก้ไข: Safe Handler สำหรับ Service Worker ป้องกัน 404
+# 🟢 Safe Handler สำหรับ Service Worker ป้องกัน 404
 @app.route('/sw.js')
 def service_worker():
     try:
@@ -117,13 +117,18 @@ def login():
         
     return jsonify({'success': False, 'message': 'Username หรือ Password ไม่ถูกต้อง'}), 401
 
+# 🟢 แก้ไข: ปรับปรุงฟังก์ชัน สมัครสมาชิก (Register) ให้ยืดหยุ่นและตรงกับหน้าเว็บ
 @app.route('/api/register', methods=['POST'])
 def register():
-    data = request.get_json() or {}
-    u, p, n = data.get('username'), data.get('password'), data.get('name')
+    data = request.get_json(silent=True) or {}
     
-    if not u or not p or not n:
-        return jsonify({'success': False, 'message': 'กรอกข้อมูลไม่ครบถ้วน'}), 400
+    # ดึงค่าแบบยืดหยุ่น (รองรับทั้ง JSON และ Form-Data)
+    u = data.get('username') or request.form.get('username')
+    p = data.get('password') or request.form.get('password')
+    n = data.get('name') or request.form.get('name') or u  # ถ้าไม่มี name ให้ใช้ username แทน
+    
+    if not u or not p:
+        return jsonify({'success': False, 'message': 'กรุณากรอกชื่อผู้ใช้และรหัสผ่านให้ครบถ้วน'}), 400
 
     users = load_json(USERS_FILE, [])
     if any(usr['username'] == u for usr in users):

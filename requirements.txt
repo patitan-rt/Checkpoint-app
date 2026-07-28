@@ -4,3 +4,4 @@ PyJWT
 qrcode
 Pillow
 werkzeug
+gunicorn

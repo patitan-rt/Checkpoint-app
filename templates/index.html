@@ -4,11 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบจัดการยืม-คืนอุปกรณ์และรถขนส่ง</title>
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Html5-QRCode Library -->
     <script src="https://unpkg.com/html5-qrcode"></script>
-    <!-- Google Fonts Prompt -->
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Prompt', sans-serif; }
@@ -19,29 +16,27 @@
     <!-- Auth Section -->
     <div id="authContainer" class="min-h-screen flex items-center justify-center p-4 w-full">
         <div class="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-sm flex flex-col items-center">
-            
             <div class="w-20 h-20 bg-indigo-50 rounded-2xl flex items-center justify-center mb-4 shadow-sm">
                 <span class="text-4xl">📦</span>
             </div>
-
             <h2 id="authTitle" class="text-2xl font-bold text-gray-800 mb-1">เข้าสู่ระบบ</h2>
             <p class="text-xs text-gray-500 mb-6 text-center">ระบบจัดการยืม-คืนอุปกรณ์และรถขนส่ง</p>
             
             <form id="authForm" onsubmit="handleAuth(event)" class="w-full space-y-4">
                 <div>
                     <label class="block text-xs font-semibold text-gray-700 mb-1">ชื่อผู้ใช้งาน (Username)</label>
-                    <input type="text" id="username" required class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition">
+                    <input type="text" id="username" required class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-700 mb-1">รหัสผ่าน (Password)</label>
-                    <input type="password" id="password" required class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition">
+                    <input type="password" id="password" required class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
                 </div>
 
                 <div id="authError" class="hidden bg-red-50 border border-red-200 text-red-500 text-xs py-2.5 px-3 rounded-xl text-center font-medium">
                     Username หรือ Password ไม่ถูกต้อง
                 </div>
 
-                <button type="submit" id="authBtn" class="w-full bg-indigo-600 text-white py-3 rounded-xl text-sm font-semibold hover:bg-indigo-700 active:scale-[0.98] transition shadow-md shadow-indigo-200">
+                <button type="submit" id="authBtn" class="w-full bg-indigo-600 text-white py-3 rounded-xl text-sm font-semibold hover:bg-indigo-700 transition shadow-md">
                     เข้าสู่ระบบ
                 </button>
             </form>
@@ -57,7 +52,7 @@
 
     <!-- Main App Section -->
     <div id="appContainer" class="hidden min-h-screen flex-col bg-gray-100 pb-20">
-        <!-- Top Bar (นำการแสดงผล User กลับมาตามเดิม) -->
+        <!-- Top Bar -->
         <div class="bg-indigo-600 text-white px-4 py-3 shadow-md flex justify-between items-center sticky top-0 z-20">
             <div class="flex items-center space-x-2">
                 <span class="text-xl">📦</span>
@@ -79,7 +74,7 @@
                         <h2 class="font-bold text-base text-gray-800 flex items-center gap-2">
                             <span>📤</span> รายการสินค้าพร้อมยืม (Available)
                         </h2>
-                        <button onclick="startScanner('CHECKOUT')" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center space-x-2 shadow-sm transition">
+                        <button onclick="startScanner('CHECKOUT')" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center space-x-2 transition">
                             <span>📷</span>
                             <span>สแกน QR Code เพื่อยืม</span>
                         </button>
@@ -88,14 +83,14 @@
                 </div>
             </div>
 
-            <!-- Tab 2: หน้าสินค้าถูกยืม (สแกนคืน + แสดงวันเวลา/คนขับ/ทะเบียนรถ) -->
+            <!-- Tab 2: หน้าสินค้าถูกยืม -->
             <div id="returnView" class="tab-content hidden space-y-4">
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
                     <div class="flex flex-col sm:flex-row justify-between items-center gap-3 mb-4">
                         <h2 class="font-bold text-base text-gray-800 flex items-center gap-2">
                             <span>📥</span> รายการสินค้าที่ถูกยืมอยู่ (Borrowed)
                         </h2>
-                        <button onclick="startScanner('CHECKIN')" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center space-x-2 shadow-sm transition">
+                        <button onclick="startScanner('CHECKIN')" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center space-x-2 transition">
                             <span>📷</span>
                             <span>สแกน QR Code เพื่อคืน</span>
                         </button>
@@ -104,7 +99,7 @@
                 </div>
             </div>
 
-            <!-- Tab 3: แท็บเพิ่มสินค้า -->
+            <!-- Tab 3: เพิ่มสินค้า -->
             <div id="addProductView" class="tab-content hidden space-y-4">
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 max-w-md mx-auto">
                     <h2 class="font-bold text-base text-gray-800 mb-4 flex items-center gap-2">
@@ -112,129 +107,64 @@
                     </h2>
                     <div class="space-y-4">
                         <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">Admin PIN (สำหรับยืนยันสิทธิ์)</label>
-                            <input type="password" id="addEqPin" placeholder="ระบุ Admin PIN" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Admin PIN</label>
+                            <input type="password" id="addEqPin" placeholder="ระบุ Admin PIN" class="w-full px-3 py-2 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">รหัสสินค้า / Tag ID</label>
-                            <input type="text" id="addEqId" placeholder="เช่น EQ-001" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <input type="text" id="addEqId" placeholder="เช่น EQ-001" class="w-full px-3 py-2 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">ชื่อสินค้า / รายละเอียด</label>
-                            <input type="text" id="addEqName" placeholder="เช่น รถยกพาเลท #1" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <input type="text" id="addEqName" placeholder="เช่น รถยกพาเลท #1" class="w-full px-3 py-2 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500">
                         </div>
-                        <button onclick="addEquipment()" class="w-full bg-indigo-600 text-white py-2.5 rounded-xl text-xs font-semibold hover:bg-indigo-700 transition shadow-sm">
+                        <button onclick="addEquipment()" class="w-full bg-indigo-600 text-white py-2.5 rounded-xl text-xs font-semibold hover:bg-indigo-700 transition">
                             บันทึกสินค้าใหม่
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- Tab 4: แท็บ Log การยืม-คืน + Log ของ Operator -->
-            <div id="logView" class="tab-content hidden space-y-4">
-                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-6">
-                    
-                    <!-- Sub-Log 1: ประวัติการยืม-คืน -->
-                    <div>
-                        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-3">
-                            <h2 class="font-bold text-sm sm:text-base text-gray-800 flex items-center gap-2">
-                                <span>📜</span> ประวัติการยืม-คืนสินค้า (Transaction Logs)
-                            </h2>
-                            <div class="flex items-center space-x-1">
-                                <input type="number" id="filterYearTrans" placeholder="YYYY" class="w-16 px-2 py-1 text-xs border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
-                                <input type="number" id="filterMonthTrans" placeholder="MM" class="w-14 px-2 py-1 text-xs border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
-                                <input type="number" id="filterDayTrans" placeholder="DD" class="w-12 px-2 py-1 text-xs border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
-                                <button onclick="loadDashboard()" class="bg-indigo-600 text-white px-2.5 py-1 text-xs rounded-lg hover:bg-indigo-700 transition">ค้นหา</button>
-                                <button onclick="clearDateFilter()" class="bg-gray-100 text-gray-600 px-2 py-1 text-xs rounded-lg hover:bg-gray-200 transition">ทั้งหมด</button>
-                            </div>
-                        </div>
-
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse text-xs whitespace-nowrap">
-                                <thead>
-                                    <tr class="bg-slate-50 border-b border-gray-200 text-gray-600">
-                                        <th class="p-3">วัน/เวลา ยืม</th>
-                                        <th class="p-3">วัน/เวลา คืน</th>
-                                        <th class="p-3">ชื่อสินค้า (Tag)</th>
-                                        <th class="p-3">ทะเบียนรถ</th>
-                                        <th class="p-3">ชื่อคนขับ</th>
-                                        <th class="p-3">ผู้ทำรายการ</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="transLogTableBody" class="divide-y divide-gray-100"></tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <hr class="border-gray-100">
-
-                    <!-- Sub-Log 2: ประวัติ Operator (Login, Logout, Change User/Pass/PIN) -->
-                    <div>
-                        <h2 class="font-bold text-sm sm:text-base text-gray-800 mb-3 flex items-center gap-2">
-                            <span>🛡️</span> ประวัติกิจกรรมผู้ใช้งานระบบ (Operator Activity Logs)
-                        </h2>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse text-xs whitespace-nowrap">
-                                <thead>
-                                    <tr class="bg-slate-50 border-b border-gray-200 text-gray-600">
-                                        <th class="p-3">วัน/เดือน/ปี เวลา</th>
-                                        <th class="p-3">ผู้ใช้งาน (User)</th>
-                                        <th class="p-3">กิจกรรม (Action)</th>
-                                        <th class="p-3">รายละเอียดเพิ่มเติม</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="operatorLogTableBody" class="divide-y divide-gray-100"></tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-
-            <!-- Tab 5: แท็บตั้งค่า (เปลี่ยน User, Pass, Admin PIN) -->
+            <!-- Tab 4: แท็บตั้งค่า -->
             <div id="settingsView" class="tab-content hidden space-y-4">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
-                    
-                    <!-- เปลี่ยน Username / Password -->
                     <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 space-y-4">
                         <h2 class="font-bold text-sm text-gray-800 flex items-center gap-2 border-b pb-2">
                             <span>👤</span> เปลี่ยนชื่อผู้ใช้ และ รหัสผ่าน
                         </h2>
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">Username ใหม่</label>
-                            <input type="text" id="newUsernameInput" placeholder="เว้นว่างไว้หากไม่ต้องการเปลี่ยน" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <input type="text" id="newUsernameInput" placeholder="เว้นว่างไว้หากไม่เปลี่ยน" class="w-full px-3 py-2 border rounded-xl text-sm outline-none">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">Password ปัจจุบัน</label>
-                            <input type="password" id="currentPasswordInput" required placeholder="ระบุเพื่อยืนยัน" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <input type="password" id="currentPasswordInput" required placeholder="ระบุเพื่อยืนยัน" class="w-full px-3 py-2 border rounded-xl text-sm outline-none">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">Password ใหม่</label>
-                            <input type="password" id="newPasswordInput" placeholder="เว้นว่างไว้หากไม่ต้องการเปลี่ยน" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <input type="password" id="newPasswordInput" placeholder="เว้นว่างไว้หากไม่เปลี่ยน" class="w-full px-3 py-2 border rounded-xl text-sm outline-none">
                         </div>
-                        <button onclick="updateAccountSettings()" class="w-full bg-indigo-600 text-white py-2.5 rounded-xl text-xs font-semibold hover:bg-indigo-700 transition shadow-sm">
-                            บันทึกการเปลี่ยนแปลงบัญชี
+                        <button onclick="updateAccountSettings()" class="w-full bg-indigo-600 text-white py-2.5 rounded-xl text-xs font-semibold hover:bg-indigo-700 transition">
+                            บันทึกการเปลี่ยนแปลง
                         </button>
                     </div>
 
-                    <!-- เปลี่ยน Admin PIN สำหรับจัดการของ -->
                     <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 space-y-4">
                         <h2 class="font-bold text-sm text-gray-800 flex items-center gap-2 border-b pb-2">
-                            <span>🔑</span> เปลี่ยน Admin PIN (สิทธิ์เพิ่ม/ลบของ)
+                            <span>🔑</span> เปลี่ยน Admin PIN
                         </h2>
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">Admin PIN ปัจจุบัน</label>
-                            <input type="password" id="currentPinInput" required placeholder="ระบุ PIN เดิม" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <input type="password" id="currentPinInput" required placeholder="ระบุ PIN เดิม" class="w-full px-3 py-2 border rounded-xl text-sm outline-none">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">Admin PIN ใหม่</label>
-                            <input type="password" id="newPinInput" required placeholder="ระบุ PIN ใหม่" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <input type="password" id="newPinInput" required placeholder="ระบุ PIN ใหม่" class="w-full px-3 py-2 border rounded-xl text-sm outline-none">
                         </div>
-                        <button onclick="updateAdminPin()" class="w-full bg-slate-800 text-white py-2.5 rounded-xl text-xs font-semibold hover:bg-slate-900 transition shadow-sm">
+                        <button onclick="updateAdminPin()" class="w-full bg-slate-800 text-white py-2.5 rounded-xl text-xs font-semibold hover:bg-slate-900 transition">
                             อัปเดต Admin PIN
                         </button>
                     </div>
-
                 </div>
             </div>
 
@@ -253,10 +183,6 @@
             <button id="nav-addProductView" onclick="switchTab('addProductView')" class="nav-btn flex flex-col items-center text-gray-400">
                 <span class="text-xl">➕</span>
                 <span class="text-[10px] font-semibold mt-0.5">เพิ่มสินค้า</span>
-            </button>
-            <button id="nav-logView" onclick="switchTab('logView')" class="nav-btn flex flex-col items-center text-gray-400">
-                <span class="text-xl">📜</span>
-                <span class="text-[10px] font-semibold mt-0.5">Log สถิติ</span>
             </button>
             <button id="nav-settingsView" onclick="switchTab('settingsView')" class="nav-btn flex flex-col items-center text-gray-400">
                 <span class="text-xl">⚙️</span>
@@ -301,26 +227,10 @@
         let html5QrCode = null;
         let currentMode = '';
         let scannedEqId = '';
-        let cachedEquipments = [];
 
         window.onload = function() {
-            setDefaultCurrentDate();
             checkAuth();
         };
-
-        function setDefaultCurrentDate() {
-            const today = new Date();
-            document.getElementById('filterYearTrans').value = today.getFullYear();
-            document.getElementById('filterMonthTrans').value = String(today.getMonth() + 1).padStart(2, '0');
-            document.getElementById('filterDayTrans').value = String(today.getDate()).padStart(2, '0');
-        }
-
-        function clearDateFilter() {
-            document.getElementById('filterYearTrans').value = '';
-            document.getElementById('filterMonthTrans').value = '';
-            document.getElementById('filterDayTrans').value = '';
-            loadDashboard();
-        }
 
         function checkAuth() {
             const token = localStorage.getItem('token');
@@ -399,23 +309,12 @@
                     errDiv.innerText = data.message;
                     errDiv.classList.remove('hidden');
                 }
-            })
-            .catch(() => {
-                errDiv.innerText = 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์';
-                errDiv.classList.remove('hidden');
             });
         }
 
         function logout() {
-            const token = localStorage.getItem('token');
-            fetch('/api/logout', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ token: token })
-            }).finally(() => {
-                localStorage.clear();
-                checkAuth();
-            });
+            localStorage.clear();
+            checkAuth();
         }
 
         function switchTab(tabId) {
@@ -448,9 +347,7 @@
 
             const config = { fps: 10, qrbox: { width: 220, height: 220 } };
             html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
-                .catch(err => {
-                    alert("ไม่สามารถเปิดกล้องได้ โปรดตรวจสอบสิทธิ์การใช้งานกล้องในมือถือ");
-                });
+                .catch(() => alert("ไม่สามารถเปิดกล้องได้ โปรดตรวจสอบสิทธิ์ใช้งานกล้อง"));
         }
 
         function stopScanner() {
@@ -555,55 +452,47 @@
             const currentPassword = document.getElementById('currentPasswordInput').value;
             const newPassword = document.getElementById('newPasswordInput').value;
 
-            if (!currentPassword) {
-                alert('กรุณากรอก Password ปัจจุบันเพื่อยืนยัน');
-                return;
+            if (!currentPassword) { alert('กรุณากรอก Password ปัจจุบัน'); return; }
+
+            if (newUsername) {
+                fetch('/api/change_username', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ token: token, new_username: newUsername, password_confirm: currentPassword })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    alert(data.message);
+                    if (data.success) {
+                        localStorage.setItem('token', data.new_token);
+                        localStorage.setItem('username', data.new_username);
+                        document.getElementById('sideUser').innerText = `👤 ${data.new_username}`;
+                    }
+                });
             }
 
-            fetch('/api/user/update_profile', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    token: token,
-                    new_username: newUsername,
-                    current_password: currentPassword,
-                    new_password: newPassword
+            if (newPassword) {
+                fetch('/api/change_password', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ token: token, old_password: currentPassword, new_password: newPassword })
                 })
-            })
-            .then(res => res.json())
-            .then(data => {
-                alert(data.message);
-                if (data.success) {
-                    if (newUsername) {
-                        localStorage.setItem('username', newUsername);
-                        document.getElementById('sideUser').innerText = `👤 ${newUsername}`;
-                    }
-                    document.getElementById('newUsernameInput').value = '';
-                    document.getElementById('currentPasswordInput').value = '';
-                    document.getElementById('newPasswordInput').value = '';
-                }
-            });
+                .then(res => res.json())
+                .then(data => { alert(data.message); });
+            }
         }
 
         function updateAdminPin() {
-            const token = localStorage.getItem('token');
             const currentPin = document.getElementById('currentPinInput').value;
             const newPin = document.getElementById('newPinInput').value;
 
-            if (!currentPin || !newPin) {
-                alert('กรุณากรอกข้อมูล PIN ให้ครบถ้วน');
-                return;
-            }
+            if (!currentPin || !newPin) { alert('กรุณากรอกข้อมูลให้ครบถ้วน'); return; }
 
-            fetch('/api/user/update_admin_pin', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    token: token,
-                    current_pin: currentPin,
-                    new_pin: newPin
-                })
-            })
+            const formData = new FormData();
+            formData.append('old_pin', currentPin);
+            formData.append('new_pin', newPin);
+
+            fetch('/api/change_admin_pin', { method: 'POST', body: formData })
             .then(res => res.json())
             .then(data => {
                 alert(data.message);
@@ -615,43 +504,11 @@
         }
 
         function loadDashboard() {
-            const yTrans = document.getElementById('filterYearTrans').value || '';
-            const mTrans = document.getElementById('filterMonthTrans').value || '';
-            const dTrans = document.getElementById('filterDayTrans').value || '';
-
-            fetch(`/api/dashboard_data?year=${yTrans}&month=${mTrans}&day=${dTrans}`)
+            fetch('/api/dashboard_data')
             .then(res => res.json())
             .then(data => {
-                cachedEquipments = data.equipments || [];
-                renderEquipmentLists(cachedEquipments);
-                renderLogs(data.logs || [], data.operator_logs || []);
+                renderEquipmentLists(data.equipments || []);
             });
-        }
-
-        function printQRCode(id, name, qrSrc) {
-            const printWindow = window.open('', '_blank', 'width=400,height=400');
-            printWindow.document.write(`
-                <html>
-                    <head>
-                        <title>Print QR - ${id}</title>
-                        <style>
-                            body { font-family: sans-serif; text-align: center; padding: 20px; }
-                            img { width: 180px; height: 180px; }
-                            .title { font-weight: bold; font-size: 14px; }
-                            .id { color: #555; font-size: 12px; margin-top: 4px; }
-                        </style>
-                    </head>
-                    <body>
-                        <div class="title">${name}</div>
-                        <img src="${qrSrc || ''}" />
-                        <div class="id">ID / Tag: ${id}</div>
-                        <script>
-                            window.onload = function() { window.print(); window.close(); }
-                        <\/script>
-                    </body>
-                </html>
-            `);
-            printWindow.document.close();
         }
 
         function renderEquipmentLists(equipments) {
@@ -661,123 +518,46 @@
             const available = equipments.filter(e => e.status === 'AVAILABLE');
             const borrowed = equipments.filter(e => e.status === 'BORROWED');
 
-            // แสดงหน้ายืมสินค้า
             availableContainer.innerHTML = available.length === 0 ? 
                 '<p class="text-xs text-gray-400 text-center col-span-2 py-8">ไม่มีสินค้าว่างพร้อมยืม</p>' : 
                 available.map(e => `
-                    <div class="border border-gray-200 rounded-xl p-3 flex justify-between items-center bg-white shadow-sm hover:border-indigo-200 transition">
+                    <div class="border border-gray-200 rounded-xl p-3 flex justify-between items-center bg-white shadow-sm">
                         <div class="flex items-center space-x-3">
-                            ${e.qrcode ? `<img src="${e.qrcode}" class="w-12 h-12 rounded-lg border p-0.5 bg-white shadow-xs shrink-0" />` : ''}
+                            ${e.qrcode ? `<img src="${e.qrcode}" class="w-12 h-12 border p-0.5 rounded-lg shrink-0" />` : ''}
                             <div>
                                 <div class="font-bold text-xs text-gray-800">${e.name}</div>
                                 <div class="text-[10px] font-mono text-gray-500">Tag: ${e.id}</div>
-                                <button onclick="printQRCode('${e.id}', '${e.name}', '${e.qrcode}')" class="text-[10px] text-indigo-600 hover:underline font-semibold mt-0.5 flex items-center gap-1">
-                                    🖨️ พิมพ์ QR
-                                </button>
                             </div>
                         </div>
-                        <button onclick="triggerCheckoutModal('${e.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] px-3 py-1.5 rounded-lg font-medium transition shadow-sm shrink-0">
+                        <button onclick="triggerCheckoutModal('${e.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] px-3 py-1.5 rounded-lg font-medium transition shadow-sm">
                             ยืมรายการนี้
                         </button>
                     </div>
                 `).join('');
 
-            // แสดงหน้าสินค้าถูกยืม (แสดงข้อมูลวันเวลา, ทะเบียนรถ, ชื่อคนขับ ยืมโดยใคร แบบละเอียด)
             borrowedContainer.innerHTML = borrowed.length === 0 ? 
                 '<p class="text-xs text-gray-400 text-center col-span-2 py-8">ไม่มีสินค้าที่กำลังถูกยืม</p>' : 
                 borrowed.map(e => `
-                    <div class="border border-red-200 rounded-2xl p-4 bg-white shadow-sm hover:border-red-300 transition space-y-3">
+                    <div class="border border-red-200 rounded-2xl p-4 bg-white shadow-sm space-y-3">
                         <div class="flex justify-between items-start">
                             <div class="flex items-center space-x-3">
-                                ${e.qrcode ? `<img src="${e.qrcode}" class="w-12 h-12 rounded-lg border p-0.5 bg-white shadow-xs shrink-0" />` : ''}
+                                ${e.qrcode ? `<img src="${e.qrcode}" class="w-12 h-12 border p-0.5 rounded-lg shrink-0" />` : ''}
                                 <div>
                                     <div class="font-bold text-xs text-gray-800">${e.name}</div>
                                     <div class="text-[10px] font-mono text-gray-500">Tag: ${e.id}</div>
-                                    <button onclick="printQRCode('${e.id}', '${e.name}', '${e.qrcode}')" class="text-[10px] text-indigo-600 hover:underline font-semibold mt-0.5 flex items-center gap-1">
-                                        🖨️ พิมพ์ QR
-                                    </button>
                                 </div>
                             </div>
-                            <button onclick="confirmCheckin('${e.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] px-3 py-1.5 rounded-lg font-medium transition shadow-sm shrink-0">
+                            <button onclick="confirmCheckin('${e.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] px-3 py-1.5 rounded-lg font-medium transition shadow-sm">
                                 คืนรายการนี้
                             </button>
                         </div>
-                        
-                        <!-- ส่วนแสดงข้อมูลการยืมเชิงลึก -->
                         <div class="bg-slate-50 p-2.5 rounded-xl text-[11px] space-y-1 text-gray-600 border border-slate-100">
-                            <div class="flex justify-between">
-                                <span class="text-gray-400">📅 เวลาที่ยืม:</span>
-                                <span class="font-mono font-medium text-gray-800">${e.borrowed_at || '-'}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-400">🚚 ทะเบียนรถ:</span>
-                                <span class="font-semibold text-indigo-600">${e.plate_number || '-'}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-400">👤 ชื่อคนขับ:</span>
-                                <span class="font-medium text-gray-800">${e.driver_name || '-'}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-400">🔑 ยืมโดย Operator:</span>
-                                <span class="text-gray-700">${e.borrowed_by || '-'}</span>
-                            </div>
+                            <div class="flex justify-between"><span class="text-gray-400">📅 เวลาที่ยืม:</span><span class="font-mono text-gray-800">${e.borrowed_at || '-'}</span></div>
+                            <div class="flex justify-between"><span class="text-gray-400">🚚 ทะเบียนรถ:</span><span class="font-semibold text-indigo-600">${e.plate_number || '-'}</span></div>
+                            <div class="flex justify-between"><span class="text-gray-400">👤 ชื่อคนขับ:</span><span class="font-medium text-gray-800">${e.driver_name || '-'}</span></div>
+                            <div class="flex justify-between"><span class="text-gray-400">🔑 ผู้บันทึก:</span><span class="text-gray-700">${e.borrowed_by || '-'}</span></div>
                         </div>
                     </div>
-                `).join('');
-        }
-
-        function renderLogs(logs, operatorLogs) {
-            const transBody = document.getElementById('transLogTableBody');
-            const opBody = document.getElementById('operatorLogTableBody');
-
-            // Render Transaction Logs
-            transBody.innerHTML = logs.length === 0 ? 
-                '<tr><td colspan="6" class="p-4 text-center text-gray-400 text-xs">ไม่พบประวัติการยืม-คืนตามวันที่เลือก</td></tr>' :
-                logs.map(l => {
-                    let plate = '-', driver = '-';
-                    if (l.details && l.details.includes('Plate:')) {
-                        const parts = l.details.split('|');
-                        if (parts[1]) {
-                            const pInfo = parts[1].split(',');
-                            plate = pInfo[0] ? pInfo[0].replace('Plate:', '').trim() : '-';
-                            driver = pInfo[1] ? pInfo[1].replace('Driver:', '').trim() : '-';
-                        }
-                    }
-                    
-                    const timeBorrow = l.action === 'CHECKOUT' ? l.timestamp : (l.checkout_time || '-');
-                    const timeReturn = l.action === 'CHECKIN' ? l.timestamp : (l.checkin_time || '<span class="text-red-500 font-semibold bg-red-50 px-2 py-0.5 rounded">ยังไม่คืน</span>');
-                    const productName = l.equipment_name ? `${l.equipment_name} (${l.eq_id})` : l.eq_id;
-
-                    return `
-                        <tr class="hover:bg-gray-50/80 transition">
-                            <td class="p-3 text-gray-700 font-mono">${timeBorrow}</td>
-                            <td class="p-3 text-gray-700 font-mono">${timeReturn}</td>
-                            <td class="p-3 font-semibold text-gray-800">${productName}</td>
-                            <td class="p-3 text-gray-700">${plate}</td>
-                            <td class="p-3 text-gray-700">${driver}</td>
-                            <td class="p-3 text-gray-500">${l.username}</td>
-                        </tr>
-                    `;
-                }).join('');
-
-            // Render Operator Activity Logs
-            opBody.innerHTML = (!operatorLogs || operatorLogs.length === 0) ? 
-                '<tr><td colspan="4" class="p-4 text-center text-gray-400 text-xs">ไม่พบประวัติกิจกรรมของ Operator</td></tr>' :
-                operatorLogs.map(o => `
-                    <tr class="hover:bg-gray-50/80 transition">
-                        <td class="p-3 text-gray-700 font-mono">${o.timestamp}</td>
-                        <td class="p-3 font-semibold text-indigo-600">${o.username}</td>
-                        <td class="p-3">
-                            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${
-                                o.action === 'LOGIN' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' :
-                                o.action === 'LOGOUT' ? 'bg-gray-100 text-gray-600 border border-gray-200' :
-                                'bg-amber-50 text-amber-600 border border-amber-200'
-                            }">
-                                ${o.action}
-                            </span>
-                        </td>
-                        <td class="p-3 text-gray-600">${o.details || '-'}</td>
-                    </tr>
                 `).join('');
         }
     </script>

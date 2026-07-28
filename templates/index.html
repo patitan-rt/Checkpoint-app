@@ -80,7 +80,7 @@
 
 <div class="navbar" id="mainNavbar" style="display: none;">
     <button class="menu-btn" onclick="toggleSidebar()">☰</button>
-    <div class="nav-title" id="pageTitle">อุปกรณ์ & ยืม-คืน</div>
+    <div class="nav-title" id="pageTitle">อุปกรณ์ถูกยืมอยู่</div>
     <div style="width: 24px;"></div>
 </div>
 
@@ -91,10 +91,12 @@
         <p style="font-size: 12px; color: #9ca3af; margin-top: 4px;">ผู้ใช้งาน: <b id="sideUser" style="color:#fff;">-</b></p>
     </div>
     <ul class="sidebar-menu">
-        <li id="menu-equip" class="active" onclick="switchTab('equip', 'อุปกรณ์ & ยืม-คืน')">📦 อุปกรณ์ & ยืม-คืน</li>
-        <li id="menu-logs" onclick="switchTab('logs', 'ประวัติ Real-time Logs')">📜 ประวัติ Real-time Logs</li>
-        <li id="menu-profile" onclick="switchTab('profile', 'เปลี่ยน รหัสผ่าน / User')">👤 เปลี่ยน รหัสผ่าน / User</li>
-        <li id="menu-admin" onclick="switchTab('admin', 'จัดการระบบ Admin')">⚙️ จัดการระบบ (Admin)</li>
+        <li id="menu-borrowed" class="active" onclick="switchTab('borrowed', '📦 อุปกรณ์ที่ถูกยืมอยู่')">📦 อุปกรณ์ที่ถูกยืมอยู่</li>
+        <li id="menu-available" onclick="switchTab('available', '✅ อุปกรณ์ที่ว่างอยู่')">✅ อุปกรณ์ที่ว่างอยู่</li>
+        <li id="menu-logs-trans" onclick="switchTab('logs-trans', '📜 ประวัติ ยืม-คืน อุปกรณ์')">📜 ประวัติ ยืม-คืน อุปกรณ์</li>
+        <li id="menu-logs-op" onclick="switchTab('logs-op', '👤 ประวัติระบบ Operator')">👤 ประวัติระบบ Operator</li>
+        <li id="menu-profile" onclick="switchTab('profile', '🔑 เปลี่ยน รหัสผ่าน / User')">🔑 เปลี่ยน รหัสผ่าน / User</li>
+        <li id="menu-admin" onclick="switchTab('admin', '⚙️ จัดการระบบ Admin')">⚙️ จัดการระบบ (Admin)</li>
         <li onclick="logout()" style="color: var(--danger-color); margin-top: 20px;">🚪 ออกจากระบบ</li>
     </ul>
 </div>
@@ -117,27 +119,32 @@
 
     <div id="appView" style="display: none;">
         
-        <!-- Tab 1: อุปกรณ์ & QR Code Tag -->
-        <div id="tab-equip" class="tab-content active">
-            <button class="btn btn-checkout" onclick="startScan('CHECKOUT')">📷 สแกน QR Code ยืมอุปกรณ์ (Checkout)</button>
-            <button class="btn btn-checkin" onclick="startScan('CHECKIN')">📷 สแกน QR Code คืนอุปกรณ์ (Checkin)</button>
-            
-            <!-- Scanner Area Container -->
-            <div id="reader-container">
-                <div id="reader"></div>
-                <button class="btn btn-danger" onclick="stopScanner()" style="margin-top: 8px;">❌ ปิดกล้องสแกน</button>
-            </div>
-
-            <h3 style="font-size: 14px; text-align: left; margin: 20px 0 10px; color: #9ca3af;">รายการอุปกรณ์ & QR Code Tags</h3>
-            <div id="equipmentList">กำลังโหลด...</div>
+        <!-- Scanner Area Global (ใช้ร่วมกันได้ทุกแท็บ) -->
+        <div id="reader-container">
+            <div id="reader"></div>
+            <button class="btn btn-danger" onclick="stopScanner()" style="margin-top: 8px;">❌ ปิดกล้องสแกน</button>
         </div>
 
-        <!-- Tab 2: Logs หมวดเวลา -->
-        <div id="tab-logs" class="tab-content">
+        <!-- Tab 1: สินค้าที่ถูกยืมอยู่ -->
+        <div id="tab-borrowed" class="tab-content active">
+            <button class="btn btn-checkin" onclick="startScan('CHECKIN')">📷 สแกน QR Code คืนอุปกรณ์ (Checkin)</button>
+            <h3 style="font-size: 14px; text-align: left; margin: 20px 0 10px; color: #fca5a5;">รายการอุปกรณ์ที่กำลังถูกยืม</h3>
+            <div id="borrowedEquipmentList">กำลังโหลด...</div>
+        </div>
+
+        <!-- Tab 2: สินค้าที่มีสถานะว่างอยู่ -->
+        <div id="tab-available" class="tab-content">
+            <button class="btn btn-checkout" onclick="startScan('CHECKOUT')">📷 สแกน QR Code ยืมอุปกรณ์ (Checkout)</button>
+            <h3 style="font-size: 14px; text-align: left; margin: 20px 0 10px; color: #34d399;">รายการอุปกรณ์พร้อมใช้งาน (ว่าง)</h3>
+            <div id="availableEquipmentList">กำลังโหลด...</div>
+        </div>
+
+        <!-- Tab 3: Logs การยืม-คืน อุปกรณ์ -->
+        <div id="tab-logs-trans" class="tab-content">
             <div class="filter-grid">
                 <div>
                     <label>ปี (Year)</label>
-                    <select id="filterYear" onchange="loadDashboard()">
+                    <select id="filterYearTrans" onchange="loadDashboard()">
                         <option value="ALL">ทุกปี</option>
                         <option value="2026" selected>2026</option>
                         <option value="2025">2025</option>
@@ -145,7 +152,7 @@
                 </div>
                 <div>
                     <label>เดือน (Month)</label>
-                    <select id="filterMonth" onchange="loadDashboard()">
+                    <select id="filterMonthTrans" onchange="loadDashboard()">
                         <option value="ALL">ทุกเดือน</option>
                         <option value="1">ม.ค.</option><option value="2">ก.พ.</option>
                         <option value="3">มี.ค.</option><option value="4">เม.ย.</option>
@@ -157,15 +164,48 @@
                 </div>
                 <div>
                     <label>วัน (Day)</label>
-                    <select id="filterDay" onchange="loadDashboard()">
+                    <select id="filterDayTrans" onchange="loadDashboard()">
                         <option value="ALL">ทุกวัน</option>
                     </select>
                 </div>
             </div>
-            <div id="logBox" class="log-box">กำลังโหลด logs...</div>
+            <div id="logBoxTrans" class="log-box">กำลังโหลดประวัติยืม-คืน...</div>
         </div>
 
-        <!-- Tab 3: เปลี่ยน Profile/Password -->
+        <!-- Tab 4: Logs ผู้ใช้งาน / Operator -->
+        <div id="tab-logs-op" class="tab-content">
+            <div class="filter-grid">
+                <div>
+                    <label>ปี (Year)</label>
+                    <select id="filterYearOp" onchange="loadDashboard()">
+                        <option value="ALL">ทุกปี</option>
+                        <option value="2026" selected>2026</option>
+                        <option value="2025">2025</option>
+                    </select>
+                </div>
+                <div>
+                    <label>เดือน (Month)</label>
+                    <select id="filterMonthOp" onchange="loadDashboard()">
+                        <option value="ALL">ทุกเดือน</option>
+                        <option value="1">ม.ค.</option><option value="2">ก.พ.</option>
+                        <option value="3">มี.ค.</option><option value="4">เม.ย.</option>
+                        <option value="5">พ.ค.</option><option value="6">มิ.ย.</option>
+                        <option value="7">ก.ค.</option><option value="8">ส.ค.</option>
+                        <option value="9">ก.ย.</option><option value="10">ต.ค.</option>
+                        <option value="11">พ.ย.</option><option value="12">ธ.ค.</option>
+                    </select>
+                </div>
+                <div>
+                    <label>วัน (Day)</label>
+                    <select id="filterDayOp" onchange="loadDashboard()">
+                        <option value="ALL">ทุกวัน</option>
+                    </select>
+                </div>
+            </div>
+            <div id="logBoxOp" class="log-box">กำลังโหลดประวัติ Operator...</div>
+        </div>
+
+        <!-- Tab 5: เปลี่ยน Profile/Password -->
         <div id="tab-profile" class="tab-content">
             <div style="background: var(--card-bg); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 20px; text-align: left;">
                 <h3 style="color: var(--accent-color); margin-bottom: 15px;">👤 เปลี่ยน Username</h3>
@@ -202,7 +242,7 @@
             </div>
         </div>
 
-        <!-- Tab 4: Admin Panel -->
+        <!-- Tab 6: Admin Panel -->
         <div id="tab-admin" class="tab-content">
             <div style="background: var(--card-bg); padding: 16px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 15px;">
                 <h3>เพิ่มอุปกรณ์ใหม่ (เจน QR Code อัตโนมัติ)</h3>
@@ -286,15 +326,21 @@
     let scannedEqId = "";
     let html5QrCode = null;
     let isLoggedIn = false;
+    let cachedEquipments = []; // เก็บ State ของรายการอุปกรณ์เพื่อใช้เช็กสถานะ
 
     window.addEventListener('DOMContentLoaded', () => {
-        const daySelect = document.getElementById('filterDay');
-        for (let i = 1; i <= 31; i++) {
-            const opt = document.createElement('option');
-            opt.value = i;
-            opt.innerText = i;
-            daySelect.appendChild(opt);
-        }
+        const populateDays = (selectId) => {
+            const daySelect = document.getElementById(selectId);
+            if (!daySelect) return;
+            for (let i = 1; i <= 31; i++) {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.innerText = i;
+                daySelect.appendChild(opt);
+            }
+        };
+        populateDays('filterDayTrans');
+        populateDays('filterDayOp');
 
         const token = localStorage.getItem('token');
         const user = localStorage.getItem('username');
@@ -445,10 +491,10 @@
         }
     }
 
-    // --- ระบบสแกน QR Code แบบใหม่ (เสถียร + ล็อกกล้องหลัง) ---
+    // --- ระบบสแกน QR Code ---
     async function startScan(mode) {
         currentMode = mode;
-        await stopScanner(); // เคลียร์ instance เก่าก่อนทุกครั้ง
+        await stopScanner();
 
         document.getElementById('reader-container').style.display = 'block';
         html5QrCode = new Html5Qrcode("reader");
@@ -458,13 +504,10 @@
         try {
             const devices = await Html5Qrcode.getCameras();
             if (devices && devices.length > 0) {
-                // ค้นหากล้องหลังโดยเช็กจาก label คำว่า back, rear, environment
                 let backCamera = devices.find(device => {
                     const label = device.label.toLowerCase();
                     return label.includes('back') || label.includes('rear') || label.includes('environment');
                 });
-
-                // ถ้าพบให้ใช้ ID ของกล้องหลัง ถ้าไม่พบใช้ตัวสุดท้ายใน list (ปกติมือถือกล้องหลังอยู่ท้ายสุด)
                 let cameraId = backCamera ? backCamera.id : devices[devices.length - 1].id;
                 await html5QrCode.start(cameraId, config, onScanSuccess);
             } else {
@@ -496,12 +539,25 @@
 
     async function onScanSuccess(decodedText) {
         scannedEqId = decodedText;
-        await stopScanner(); // สแกนติดแล้วปิดสตรีมกล้องทันทีเพื่อคืน Memory
+        await stopScanner();
+
+        // ตรวจสอบข้อมูลสถานะอุปกรณ์เบื้องต้น
+        const targetEq = cachedEquipments.find(e => e.id === scannedEqId);
 
         if (currentMode === "CHECKOUT") {
+            if (targetEq && targetEq.status === "BORROWED") {
+                alert("อุปกรณ์นี้ถูกยืมไปแล้ว!");
+                return;
+            }
             document.getElementById('modalEqId').innerText = scannedEqId;
             document.getElementById('vehicleModal').style.display = 'flex';
         } else if (currentMode === "CHECKIN") {
+            // บัค fix: เช็กถ้าอุปกรณ์ว่างอยู่แล้ว ให้แจ้งเตือนทันที
+            if (targetEq && targetEq.status === "AVAILABLE") {
+                alert("อุปกรณ์นี้ไม่ได้อยู่ในระบบการยืมสินค้า");
+                return;
+            }
+
             const token = localStorage.getItem('token');
             const res = await fetch('/api/checkin', {
                 method: 'POST',
@@ -620,17 +676,26 @@
     async function loadDashboard() {
         if (!isLoggedIn) return;
 
-        const y = document.getElementById('filterYear').value;
-        const m = document.getElementById('filterMonth').value;
-        const d = document.getElementById('filterDay').value;
+        // ดึงฟิลเตอร์ฝั่ง Trans / Op
+        const yTrans = document.getElementById('filterYearTrans').value;
+        const mTrans = document.getElementById('filterMonthTrans').value;
+        const dTrans = document.getElementById('filterDayTrans').value;
 
-        const res = await fetch(`/api/dashboard_data?year=${y}&month=${m}&day=${d}`);
+        const yOp = document.getElementById('filterYearOp').value;
+        const mOp = document.getElementById('filterMonthOp').value;
+        const dOp = document.getElementById('filterDayOp').value;
+
+        const res = await fetch(`/api/dashboard_data?year=${yTrans}&month=${mTrans}&day=${dTrans}`);
         const data = await res.json();
         
-        let eqHtml = "";
-        data.equipments.forEach(e => {
+        cachedEquipments = data.equipments || [];
+
+        let borrowedHtml = "";
+        let availableHtml = "";
+
+        cachedEquipments.forEach(e => {
             const isAvail = e.status === "AVAILABLE";
-            eqHtml += `
+            const cardHtml = `
             <div class="item-card">
                 <div class="item-header">
                     <div>
@@ -645,21 +710,44 @@
                     </div>
                 </div>
                 
-                <!-- QR Code Tag Container -->
                 <div class="qrcode-box">
                     <img src="${e.qrcode}" class="qrcode-img" alt="QR Code ${e.id}">
                     <div class="qrcode-text">${e.id}</div>
                 </div>
                 <button class="btn btn-secondary" onclick="printQrTag('${e.id}', '${e.name}', '${e.qrcode}')" style="margin-top:8px; padding:6px; font-size:12px;">🖨️ พิมพ์ Tag QR Code</button>
             </div>`;
-        });
-        document.getElementById('equipmentList').innerHTML = eqHtml || "<small style='color:#6b7280;'>ยังไม่มีอุปกรณ์</small>";
 
-        let logHtml = "";
-        data.logs.forEach(l => {
-            logHtml += `<div>[${l.timestamp}] <b style="color:var(--accent-color);">${l.eq_id}</b> (${l.username}): ${l.details}</div><hr style="border-color:#1f2937; margin:6px 0;">`;
+            if (isAvail) {
+                availableHtml += cardHtml;
+            } else {
+                borrowedHtml += cardHtml;
+            }
         });
-        document.getElementById('logBox').innerHTML = logHtml || "<div style='color:#6b7280; text-align:center;'>ไม่พบประวัติการใช้งานตามตัวกรอง</div>";
+
+        document.getElementById('borrowedEquipmentList').innerHTML = borrowedHtml || "<small style='color:#6b7280;'>ไม่มีอุปกรณ์ที่ถูกยืมในขณะนี้</small>";
+        document.getElementById('availableEquipmentList').innerHTML = availableHtml || "<small style='color:#6b7280;'>ไม่มีอุปกรณ์ว่างในระบบ</small>";
+
+        // แยกประเภท Log
+        let transLogHtml = "";
+        let opLogHtml = "";
+
+        const allLogs = data.logs || [];
+        
+        allLogs.forEach(l => {
+            const detailText = l.details || "";
+            const isTransLog = detailText.includes("Checkout") || detailText.includes("Checkin") || detailText.includes("ยืม") || detailText.includes("คืน");
+
+            const logItem = `<div>[${l.timestamp}] <b style="color:var(--accent-color);">${l.eq_id}</b> (${l.username}): ${l.details}</div><hr style="border-color:#1f2937; margin:6px 0;">`;
+
+            if (isTransLog) {
+                transLogHtml += logItem;
+            } else {
+                opLogHtml += logItem;
+            }
+        });
+
+        document.getElementById('logBoxTrans').innerHTML = transLogHtml || "<div style='color:#6b7280; text-align:center;'>ไม่พบประวัติการยืม-คืน</div>";
+        document.getElementById('logBoxOp').innerHTML = opLogHtml || "<div style='color:#6b7280; text-align:center;'>ไม่พบประวัติการทำงานของ Operator</div>";
     }
 </script>
 </body>

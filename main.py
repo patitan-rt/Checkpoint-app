@@ -55,10 +55,20 @@ def generate_qr_base64(text):
 def add_log(username, eq_id, action, details):
     logs = load_json(LOGS_FILE, [])
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    # ดึงชื่ออุปกรณ์มาแนบใน Log เพื่อการแสดงผลที่ถูกต้อง
+    eq_name = "-"
+    if eq_id != "-":
+        equipments = load_json(EQUIPMENT_FILE, [])
+        eq = next((e for e in equipments if e['id'] == eq_id), None)
+        if eq:
+            eq_name = eq.get('name', '-')
+
     logs.insert(0, {
         "timestamp": now_str,
         "username": username,
         "eq_id": eq_id,
+        "eq_name": eq_name,
         "action": action, # 'CHECKOUT', 'CHECKIN', 'SYSTEM', 'LOGIN'
         "details": details
     })
@@ -71,7 +81,6 @@ def get_user_by_token(token):
 def index():
     return render_template('index.html')
 
-# 🟢 Safe Handler สำหรับ manifest.json ป้องกัน 404
 @app.route('/manifest.json')
 def manifest():
     try:
@@ -86,7 +95,6 @@ def manifest():
             "theme_color": "#000000"
         })
 
-# 🟢 Safe Handler สำหรับ Service Worker ป้องกัน 404
 @app.route('/sw.js')
 def service_worker():
     try:
@@ -104,29 +112,22 @@ def login():
         return jsonify({'success': False, 'message': 'กรุณากรอก Username และ Password'}), 400
 
     users = load_json(USERS_FILE, [])
-    
     user = next((u for u in users if u['username'] == username and u['password'] == password), None)
     if user:
         token = secrets.token_hex(16)
         tokens[token] = username
-        
-        # บันทึก Log เมื่อเข้าสู่ระบบสำเร็จ
         add_log(username, "-", "LOGIN", "เข้าสู่ระบบสำเร็จ")
-        
         return jsonify({'success': True, 'token': token, 'username': username})
         
     return jsonify({'success': False, 'message': 'Username หรือ Password ไม่ถูกต้อง'}), 401
 
-# 🟢 แก้ไข: ปรับปรุงฟังก์ชัน สมัครสมาชิก (Register) ให้ยืดหยุ่นและตรงกับหน้าเว็บ
 @app.route('/api/register', methods=['POST'])
 def register():
     data = request.get_json(silent=True) or {}
-    
-    # ดึงค่าแบบยืดหยุ่น (รองรับทั้ง JSON และ Form-Data)
     u = data.get('username') or request.form.get('username')
     p = data.get('password') or request.form.get('password')
-    n = data.get('name') or request.form.get('name') or u  # ถ้าไม่มี name ให้ใช้ username แทน
-    
+    n = data.get('name') or request.form.get('name') or u
+
     if not u or not p:
         return jsonify({'success': False, 'message': 'กรุณากรอกชื่อผู้ใช้และรหัสผ่านให้ครบถ้วน'}), 400
 
@@ -136,10 +137,7 @@ def register():
     
     users.append({"username": u, "password": p, "name": n})
     save_json(USERS_FILE, users)
-    
-    # บันทึก Log เมื่อลงทะเบียนผู้ใช้ใหม่
     add_log(u, "-", "SYSTEM", f"ลงทะเบียนผู้ใช้งานใหม่: {n}")
-    
     return jsonify({'success': True, 'message': 'ลงทะเบียนสำเร็จ'})
 
 @app.route('/api/change_username', methods=['POST'])
@@ -247,7 +245,7 @@ def delete_equipment():
     equipments = [e for e in equipments if e['id'] != eq_id]
     save_json(EQUIPMENT_FILE, equipments)
     
-    add_log("ADMIN", eq_id, "SYSTEM", f"ลบอุปกรณ์ออกจากระบบ")
+    add_log("ADMIN", eq_id, "SYSTEM", "ลบอุปกรณ์ออกจากระบบ")
     return jsonify({'success': True, 'message': 'ลบอุปกรณ์เรียบร้อย'})
 
 @app.route('/api/checkout', methods=['POST'])
@@ -269,7 +267,6 @@ def checkout():
     if eq['status'] == 'BORROWED': 
         return jsonify({'success': False, 'message': 'อุปกรณ์นี้ถูกยืมไปแล้ว'}), 400
 
-    # LOGIC CHECK: ตรวจสอบการยืมค้างของคนขับต่างทะเบียนรถ
     if driver != '-':
         logs = load_json(LOGS_FILE, [])
         active_borrows = {}
@@ -289,10 +286,15 @@ def checkout():
             if info['driver'] == driver and info['plate'] != plate:
                 return jsonify({
                     'success': False,
-                    'message': f"ไม่อนุญาต: คุณ {driver} มีรายการยืมอุปกรณ์ ({e_id}) ค้างอยู่ที่รถทะเบียน [{info['plate']}] โปรด คืนสินค้าเดิม ก่อนยืมด้วยรถทะเบียน [{plate}]"
+                    'message': f"ไม่อนุญาต: คุณ {driver} มีรายการยืมอุปกรณ์ ({e_id}) ค้างอยู่ที่รถทะเบียน [{info['plate']}] โปรดคืนสินค้าเดิม ก่อนยืมด้วยรถทะเบียน [{plate}]"
                 }), 400
 
+    # บันทึกสถานะ และข้อมูลการยืมลงในอุปกรณ์
     eq['status'] = 'BORROWED'
+    eq['borrowed_at'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    eq['plate_number'] = plate
+    eq['driver_name'] = driver
+    eq['borrowed_by'] = username
     save_json(EQUIPMENT_FILE, equipments)
 
     add_log(username, eq_id, "CHECKOUT", f"Checkout | Plate: {plate}, Driver: {driver}")
@@ -314,6 +316,10 @@ def checkin():
         return jsonify({'success': False, 'message': 'ไม่พบรหัสอุปกรณ์ในระบบ'}), 404
 
     eq['status'] = 'AVAILABLE'
+    eq.pop('borrowed_at', None)
+    eq.pop('plate_number', None)
+    eq.pop('driver_name', None)
+    eq.pop('borrowed_by', None)
     save_json(EQUIPMENT_FILE, equipments)
 
     add_log(username, eq_id, "CHECKIN", "Checkin | คืนอุปกรณ์เรียบร้อยแล้ว")
@@ -329,7 +335,6 @@ def change_admin_pin():
 
     config['admin_pin'] = new_pin
     save_json(CONFIG_FILE, config)
-    
     add_log("ADMIN", "-", "SYSTEM", "เปลี่ยนรหัส Admin PIN")
     return jsonify({'success': True, 'message': 'เปลี่ยน Admin PIN สำเร็จ'})
 
@@ -346,9 +351,15 @@ def dashboard_data():
     for l in logs:
         try:
             dt = datetime.strptime(l['timestamp'], "%Y-%m-%d %H:%M:%S")
-            if year != 'ALL' and str(dt.year) != str(year): continue
-            if month != 'ALL' and str(dt.month) != str(month): continue
-            if day != 'ALL' and str(dt.day) != str(day): continue
+            
+            # แก้ไขบั๊กเปรียบเทียบประเภทข้อมูล (int)
+            if year != 'ALL' and year != '' and dt.year != int(year): 
+                continue
+            if month != 'ALL' and month != '' and dt.month != int(month): 
+                continue
+            if day != 'ALL' and day != '' and dt.day != int(day): # แก้ไขบั๊กเช็ควัน
+                continue
+                
             filtered_logs.append(l)
         except Exception:
             filtered_logs.append(l)

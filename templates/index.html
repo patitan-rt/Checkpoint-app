@@ -30,11 +30,13 @@
             <form id="authForm" onsubmit="handleAuth(event)" class="w-full space-y-4">
                 <div>
                     <label class="block text-xs font-semibold text-gray-700 mb-1">ชื่อผู้ใช้งาน (Username)</label>
-                    <input type="text" id="username" required placeholder="main" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition">
+                    <!-- เอา placeholder="main" ออกแล้ว -->
+                    <input type="text" id="username" required class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-700 mb-1">รหัสผ่าน (Password)</label>
-                    <input type="password" id="password" required placeholder="••••" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition">
+                    <!-- เอา placeholder="••••" ออกแล้ว -->
+                    <input type="password" id="password" required class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition">
                 </div>
 
                 <div id="authError" class="hidden bg-red-50 border border-red-200 text-red-500 text-xs py-2.5 px-3 rounded-xl text-center font-medium">
@@ -57,14 +59,13 @@
 
     <!-- Main App Section -->
     <div id="appContainer" class="hidden min-h-screen flex-col bg-gray-100 pb-20">
-        <!-- Top Bar -->
+        <!-- Top Bar (ไม่มีป้ายบอก User แล้ว) -->
         <div class="bg-indigo-600 text-white px-4 py-3 shadow-md flex justify-between items-center sticky top-0 z-20">
             <div class="flex items-center space-x-2">
                 <span class="text-xl">📦</span>
                 <h1 class="font-bold text-sm sm:text-base">ระบบยืม-คืนอุปกรณ์</h1>
             </div>
-            <div class="flex items-center space-x-3">
-                <span id="sideUser" class="text-xs font-medium bg-indigo-700/80 px-3 py-1 rounded-full border border-indigo-500">👤 User</span>
+            <div>
                 <button onclick="logout()" class="text-xs bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-full font-medium transition shadow-sm">ออกจากระบบ</button>
             </div>
         </div>
@@ -139,10 +140,11 @@
                         </h2>
                         <!-- Filter Data -->
                         <div class="flex items-center space-x-1">
-                            <input type="number" id="filterYearTrans" placeholder="ปี (YYYY)" class="w-20 px-2 py-1 text-xs border rounded-lg">
-                            <input type="number" id="filterMonthTrans" placeholder="เดือน (MM)" class="w-20 px-2 py-1 text-xs border rounded-lg">
-                            <input type="number" id="filterDayTrans" placeholder="วัน (DD)" class="w-16 px-2 py-1 text-xs border rounded-lg">
-                            <button onclick="loadDashboard()" class="bg-indigo-600 text-white px-3 py-1 text-xs rounded-lg hover:bg-indigo-700">ค้นหา</button>
+                            <input type="number" id="filterYearTrans" placeholder="ปี (YYYY)" class="w-20 px-2 py-1 text-xs border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <input type="number" id="filterMonthTrans" placeholder="เดือน (MM)" class="w-20 px-2 py-1 text-xs border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <input type="number" id="filterDayTrans" placeholder="วัน (DD)" class="w-16 px-2 py-1 text-xs border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <button onclick="loadDashboard()" class="bg-indigo-600 text-white px-3 py-1 text-xs rounded-lg hover:bg-indigo-700 transition">ค้นหา</button>
+                            <button onclick="clearDateFilter()" class="bg-gray-100 text-gray-600 px-2 py-1 text-xs rounded-lg hover:bg-gray-200 transition" title="ล้างค่าทั้งหมด">ทั้งหมด</button>
                         </div>
                     </div>
 
@@ -226,18 +228,34 @@
         let cachedEquipments = [];
 
         window.onload = function() {
+            // ตั้งค่าเริ่มต้นวันที่ปัจจุบันในช่อง Filter
+            setDefaultCurrentDate();
             checkAuth();
         };
 
+        // ตั้งค่า Default วัน/เดือน/ปี เป็น ปัจจุบัน
+        function setDefaultCurrentDate() {
+            const today = new Date();
+            document.getElementById('filterYearTrans').value = today.getFullYear();
+            document.getElementById('filterMonthTrans').value = String(today.getMonth() + 1).padStart(2, '0');
+            document.getElementById('filterDayTrans').value = String(today.getDate()).padStart(2, '0');
+        }
+
+        // ปุ่มสำหรับล้างค่าเพื่อดู Log ทั้งหมด
+        function clearDateFilter() {
+            document.getElementById('filterYearTrans').value = '';
+            document.getElementById('filterMonthTrans').value = '';
+            document.getElementById('filterDayTrans').value = '';
+            loadDashboard();
+        }
+
         function checkAuth() {
             const token = localStorage.getItem('token');
-            const username = localStorage.getItem('username');
             if (token) {
                 document.getElementById('authContainer').classList.add('hidden');
                 document.getElementById('authContainer').classList.remove('flex');
                 document.getElementById('appContainer').classList.remove('hidden');
                 document.getElementById('appContainer').classList.add('flex');
-                document.getElementById('sideUser').innerText = `👤 ${username}`;
                 loadDashboard();
             } else {
                 document.getElementById('authContainer').classList.remove('hidden');
@@ -251,7 +269,7 @@
             isLoginMode = !isLoginMode;
             document.getElementById('authTitle').innerText = isLoginMode ? 'เข้าสู่ระบบ' : 'สมัครสมาชิก';
             document.getElementById('authBtn').innerText = isLoginMode ? 'เข้าสู่ระบบ' : 'สมัครสมาชิก';
-            document.getElementById('toggleAuthBtn').innerText = isLoginMode ? 'สมัครสมาชิกที่นี่' : 'เข้าสู่ระบบที่นี่';
+            document.getElementById('toggleAuthBtn').innerText = isLoginMode ? 'เข้าสู่ระบบที่นี่' : 'สมัครสมาชิกที่นี่';
             document.getElementById('authError').classList.add('hidden');
         }
 
@@ -463,7 +481,6 @@
             });
         }
 
-        // ฟังก์ชันสั่งพิมพ์ QR Code (Print QR)
         function printQRCode(id, name, qrSrc) {
             const printWindow = window.open('', '_blank', 'width=400,height=400');
             printWindow.document.write(`
@@ -497,7 +514,6 @@
             const available = equipments.filter(e => e.status === 'AVAILABLE');
             const borrowed = equipments.filter(e => e.status === 'BORROWED');
 
-            // แสดงหน้ายืมสินค้า + รูปภาพ & ปุ่มพิมพ์ QR Code
             availableContainer.innerHTML = available.length === 0 ? 
                 '<p class="text-xs text-gray-400 text-center col-span-2 py-8">ไม่มีสินค้าว่างพร้อมยืม</p>' : 
                 available.map(e => `
@@ -518,7 +534,6 @@
                     </div>
                 `).join('');
 
-            // แสดงหน้าสินค้าถูกยืม + รูปภาพ & ปุ่มพิมพ์ QR Code
             borrowedContainer.innerHTML = borrowed.length === 0 ? 
                 '<p class="text-xs text-gray-400 text-center col-span-2 py-8">ไม่มีสินค้าที่กำลังถูกยืม</p>' : 
                 borrowed.map(e => `
@@ -544,7 +559,7 @@
             const transBody = document.getElementById('transLogTableBody');
 
             transBody.innerHTML = logs.length === 0 ? 
-                '<tr><td colspan="6" class="p-4 text-center text-gray-400 text-xs">ไม่พบประวัติการทำรายการ</td></tr>' :
+                '<tr><td colspan="6" class="p-4 text-center text-gray-400 text-xs">ไม่พบประวัติการทำรายการตามช่วงวันที่เลือก</td></tr>' :
                 logs.map(l => {
                     let plate = '-', driver = '-';
                     if (l.details && l.details.includes('Plate:')) {

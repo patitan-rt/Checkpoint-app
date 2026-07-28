@@ -10,7 +10,7 @@ from pydantic import BaseModel
 import jwt
 
 # --- SQLAlchemy Imports ---
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, func
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text
 from sqlalchemy.orm import sessionmaker, declarative_base
 
 app = FastAPI(title="Checkpoint PWA System")
@@ -24,19 +24,16 @@ templates = Jinja2Templates(directory="templates")
 SECRET_KEY = "SUPER_SECRET_CHECKPOINT_KEY_CHANGE_ME"
 ALGORITHM = "HS256"
 
-# --- Supabase PostgreSQL Connection ---
-# ดึงค่าจาก Environment Variable บน Render (หากมี) หรือ fallback ใช้ Connection String โดยตรง
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
     "postgresql://postgres.wcngqpcicnxvfakinkku:tRPeILhiSbFWmIff@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
 )
 
-# สร้าง SQLAlchemy Engine และ Session
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# --- Database Models (PostgreSQL Table Models) ---
+# --- Database Models ---
 class User(Base):
     __tablename__ = "users"
     username = Column(String, primary_key=True, index=True)
@@ -64,25 +61,18 @@ class Setting(Base):
     key = Column(String, primary_key=True)
     value = Column(String, nullable=False)
 
-# สร้างตารางบน Supabase อัตโนมัติ (หากยังไม่มี) และลงข้อมูลเริ่มต้น
 def init_db():
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
-        # Check and insert default settings
         if not db.query(Setting).filter(Setting.key == "admin_pin").first():
             db.add(Setting(key="admin_pin", value="9999"))
-        
-        # Check and insert default users
         if not db.query(User).filter(User.username == "admin").first():
             db.add(User(username="admin", password="1234", name="Admin User"))
-            
-        # Check and insert default equipments
         if not db.query(Equipment).filter(Equipment.id == "EQ-101").first():
             db.add(Equipment(id="EQ-101", name="ตู้เชื่อม Portable", status="AVAILABLE", image=""))
         if not db.query(Equipment).filter(Equipment.id == "EQ-102").first():
             db.add(Equipment(id="EQ-102", name="สว่านไร้สาย", status="AVAILABLE", image=""))
-            
         db.commit()
     except Exception as e:
         db.rollback()
@@ -90,12 +80,10 @@ def init_db():
     finally:
         db.close()
 
-# เรียกใช้งาน init_db() ตอนเริ่มระบบ
 init_db()
 
-# --- Helper Functions ---
+# --- Helpers ---
 def generate_qrcode_svg(text: str) -> str:
-    """สร้าง QR Code URL สำหรับแสดงผล"""
     return f"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={text}"
 
 def get_admin_pin():
@@ -198,7 +186,7 @@ async def register_user(data: RegisterModel):
         
         add_db_log("USER", "REGISTER", f"ลงทะเบียนผู้ใช้งานใหม่: {data.name}", data.username)
         return {"success": True, "message": "สมัครสมาชิกสำเร็จ!"}
-    except Exception as e:
+    except Exception:
         db.rollback()
         return {"success": False, "message": "เกิดข้อผิดพลาดในการลงทะเบียน"}
     finally:
@@ -308,9 +296,11 @@ async def checkin(req: CheckinModel):
     db = SessionLocal()
     try:
         eq = db.query(Equipment).filter(Equipment.id == req.eq_id).first()
-        if eq:
-            eq.status = "AVAILABLE"
-            db.commit()
+        if not eq:
+            return {"success": False, "message": "ไม่พบอุปกรณ์นี้"}
+
+        eq.status = "AVAILABLE"
+        db.commit()
 
         add_db_log(req.eq_id, "CHECKIN", "คืนอุปกรณ์เรียบร้อย", username)
         return {"success": True, "message": f"คืนอุปกรณ์ {req.eq_id} เรียบร้อย"}
@@ -320,15 +310,24 @@ async def checkin(req: CheckinModel):
     finally:
         db.close()
 
-# API ดึง Dashboard + เจน QR Code
+# API ดึง Dashboard แบบกรอง Log ตาม Username แต่ละคน
 @app.get("/api/dashboard_data")
-async def get_dashboard_data(year: Optional[str] = None, month: Optional[str] = None, day: Optional[str] = None):
+async def get_dashboard_data(
+    token: Optional[str] = None,
+    year: Optional[str] = None, 
+    month: Optional[str] = None, 
+    day: Optional[str] = None
+):
+    current_user = verify_token(token) if token else None
     db = SessionLocal()
     try:
         eqs = db.query(Equipment).all()
         query = db.query(Log)
 
-        # กรองข้อมูล Log ตาม ปี/เดือน/วัน (รองรับรูปแบบ String "YYYY-MM-DD HH:MM:SS")
+        # แยก Log เฉพาะของ User คนที่ล็อกอินอยู่ (หากไม่ใช่ admin)
+        if current_user and current_user != "admin":
+            query = query.filter(Log.username == current_user)
+
         if year and year != "ALL":
             query = query.filter(Log.timestamp.like(f"{year}-%"))
         if month and month != "ALL":

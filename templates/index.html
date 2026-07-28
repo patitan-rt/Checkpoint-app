@@ -12,23 +12,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Prompt', sans-serif; }
-        .badge {
-            font-size: 11px;
-            padding: 3px 10px;
-            border-radius: 9999px;
-            font-weight: 600;
-        }
-        .badge-borrowed { background-color: #FEE2E2; color: #991B1B; }
-        .badge-avail { background-color: #D1FAE5; color: #065F46; }
     </style>
 </head>
 <body class="bg-slate-900 text-gray-800 min-h-screen flex flex-col">
 
-    <!-- Auth Section (ดีไซน์ตามรูปภาพตัวอย่าง) -->
+    <!-- Auth Section -->
     <div id="authContainer" class="min-h-screen flex items-center justify-center p-4 w-full">
         <div class="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-sm flex flex-col items-center">
             
-            <!-- Box Icon -->
             <div class="w-20 h-20 bg-indigo-50 rounded-2xl flex items-center justify-center mb-4 shadow-sm">
                 <span class="text-4xl">📦</span>
             </div>
@@ -46,7 +37,6 @@
                     <input type="password" id="password" required placeholder="••••" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition">
                 </div>
 
-                <!-- Alert Box ตามภาพตัวอย่าง -->
                 <div id="authError" class="hidden bg-red-50 border border-red-200 text-red-500 text-xs py-2.5 px-3 rounded-xl text-center font-medium">
                     Username หรือ Password ไม่ถูกต้อง
                 </div>
@@ -87,9 +77,9 @@
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
                     <div class="flex flex-col sm:flex-row justify-between items-center gap-3 mb-4">
                         <h2 class="font-bold text-base text-gray-800 flex items-center gap-2">
-                            <span>📤</span> รายการสินค้าพร้อมยืม
+                            <span>📤</span> รายการสินค้าพร้อมยืม (Available)
                         </h2>
-                        <button onclick="startScanner('CHECKOUT')" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-semibold flex items-center justify-center space-x-2 shadow-sm transition">
+                        <button onclick="startScanner('CHECKOUT')" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center space-x-2 shadow-sm transition">
                             <span>📷</span>
                             <span>สแกน QR Code เพื่อยืม</span>
                         </button>
@@ -103,9 +93,9 @@
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
                     <div class="flex flex-col sm:flex-row justify-between items-center gap-3 mb-4">
                         <h2 class="font-bold text-base text-gray-800 flex items-center gap-2">
-                            <span>📥</span> รายการสินค้าที่ถูกยืมอยู่
+                            <span>📥</span> รายการสินค้าที่ถูกยืมอยู่ (Borrowed)
                         </h2>
-                        <button onclick="startScanner('CHECKIN')" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-semibold flex items-center justify-center space-x-2 shadow-sm transition">
+                        <button onclick="startScanner('CHECKIN')" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center space-x-2 shadow-sm transition">
                             <span>📷</span>
                             <span>สแกน QR Code เพื่อคืน</span>
                         </button>
@@ -176,7 +166,7 @@
 
         </div>
 
-        <!-- Bottom Navigation Bar (แท็บเมนูด้านล่าง) -->
+        <!-- Bottom Navigation Bar -->
         <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around py-2 z-20 shadow-lg">
             <button id="nav-borrowView" onclick="switchTab('borrowView')" class="nav-btn flex flex-col items-center text-indigo-600">
                 <span class="text-xl">📤</span>
@@ -473,6 +463,33 @@
             });
         }
 
+        // ฟังก์ชันสั่งพิมพ์ QR Code (Print QR)
+        function printQRCode(id, name, qrSrc) {
+            const printWindow = window.open('', '_blank', 'width=400,height=400');
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Print QR - ${id}</title>
+                        <style>
+                            body { font-family: sans-serif; text-align: center; padding: 20px; }
+                            img { width: 180px; height: 180px; }
+                            .title { font-weight: bold; font-size: 14px; }
+                            .id { color: #555; font-size: 12px; margin-top: 4px; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="title">${name}</div>
+                        <img src="${qrSrc || ''}" />
+                        <div class="id">ID / Tag: ${id}</div>
+                        <script>
+                            window.onload = function() { window.print(); window.close(); }
+                        <\/script>
+                    </body>
+                </html>
+            `);
+            printWindow.document.close();
+        }
+
         function renderEquipmentLists(equipments) {
             const availableContainer = document.getElementById('availableEquipmentList');
             const borrowedContainer = document.getElementById('borrowedEquipmentList');
@@ -480,31 +497,43 @@
             const available = equipments.filter(e => e.status === 'AVAILABLE');
             const borrowed = equipments.filter(e => e.status === 'BORROWED');
 
-            // แสดงหน้ายืมสินค้า
+            // แสดงหน้ายืมสินค้า + รูปภาพ & ปุ่มพิมพ์ QR Code
             availableContainer.innerHTML = available.length === 0 ? 
                 '<p class="text-xs text-gray-400 text-center col-span-2 py-8">ไม่มีสินค้าว่างพร้อมยืม</p>' : 
                 available.map(e => `
-                    <div class="border border-gray-100 rounded-xl p-3 flex justify-between items-center bg-gray-50/50 hover:bg-gray-50 transition">
-                        <div>
-                            <div class="font-bold text-xs text-gray-800">${e.name}</div>
-                            <div class="text-[10px] font-mono text-gray-500">Tag: ${e.id}</div>
+                    <div class="border border-gray-200 rounded-xl p-3 flex justify-between items-center bg-white shadow-sm hover:border-indigo-200 transition">
+                        <div class="flex items-center space-x-3">
+                            ${e.qrcode ? `<img src="${e.qrcode}" class="w-12 h-12 rounded-lg border p-0.5 bg-white shadow-xs shrink-0" />` : ''}
+                            <div>
+                                <div class="font-bold text-xs text-gray-800">${e.name}</div>
+                                <div class="text-[10px] font-mono text-gray-500">Tag: ${e.id}</div>
+                                <button onclick="printQRCode('${e.id}', '${e.name}', '${e.qrcode}')" class="text-[10px] text-indigo-600 hover:underline font-semibold mt-0.5 flex items-center gap-1">
+                                    🖨️ พิมพ์ QR
+                                </button>
+                            </div>
                         </div>
-                        <button onclick="triggerCheckoutModal('${e.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] px-3 py-1.5 rounded-lg font-medium transition shadow-sm">
+                        <button onclick="triggerCheckoutModal('${e.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] px-3 py-1.5 rounded-lg font-medium transition shadow-sm shrink-0">
                             ยืมรายการนี้
                         </button>
                     </div>
                 `).join('');
 
-            // แสดงหน้าสินค้าถูกยืม
+            // แสดงหน้าสินค้าถูกยืม + รูปภาพ & ปุ่มพิมพ์ QR Code
             borrowedContainer.innerHTML = borrowed.length === 0 ? 
                 '<p class="text-xs text-gray-400 text-center col-span-2 py-8">ไม่มีสินค้าที่กำลังถูกยืม</p>' : 
                 borrowed.map(e => `
-                    <div class="border border-red-100 rounded-xl p-3 flex justify-between items-center bg-red-50/30 hover:bg-red-50/50 transition">
-                        <div>
-                            <div class="font-bold text-xs text-gray-800">${e.name}</div>
-                            <div class="text-[10px] font-mono text-gray-500">Tag: ${e.id}</div>
+                    <div class="border border-red-100 rounded-xl p-3 flex justify-between items-center bg-white shadow-sm hover:border-red-200 transition">
+                        <div class="flex items-center space-x-3">
+                            ${e.qrcode ? `<img src="${e.qrcode}" class="w-12 h-12 rounded-lg border p-0.5 bg-white shadow-xs shrink-0" />` : ''}
+                            <div>
+                                <div class="font-bold text-xs text-gray-800">${e.name}</div>
+                                <div class="text-[10px] font-mono text-gray-500">Tag: ${e.id}</div>
+                                <button onclick="printQRCode('${e.id}', '${e.name}', '${e.qrcode}')" class="text-[10px] text-indigo-600 hover:underline font-semibold mt-0.5 flex items-center gap-1">
+                                    🖨️ พิมพ์ QR
+                                </button>
+                            </div>
                         </div>
-                        <button onclick="confirmCheckin('${e.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] px-3 py-1.5 rounded-lg font-medium transition shadow-sm">
+                        <button onclick="confirmCheckin('${e.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] px-3 py-1.5 rounded-lg font-medium transition shadow-sm shrink-0">
                             คืนรายการนี้
                         </button>
                     </div>

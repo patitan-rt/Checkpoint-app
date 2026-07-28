@@ -9,6 +9,27 @@
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Prompt', sans-serif; }
+        
+        /* สไตล์สำหรับซ่อนส่วนที่ไม่เกี่ยวข้องเวลาสั่งพิมพ์ (Print CSS) */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #printSection, #printSection * {
+                visibility: visible;
+            }
+            #printSection {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                display: flex !important;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+            }
+        }
     </style>
 </head>
 <body class="bg-slate-900 text-gray-800 min-h-screen flex flex-col">
@@ -74,7 +95,7 @@
                         <h2 class="font-bold text-base text-gray-800 flex items-center gap-2">
                             <span>📤</span> รายการสินค้าพร้อมยืม (Available)
                         </h2>
-                        <button onclick="startScanner('CHECKOUT')" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center space-x-2 transition">
+                        <button onclick="startScanner('CHECKOUT')" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center space-x-2 transition shadow-md">
                             <span>📷</span>
                             <span>สแกน QR Code เพื่อยืม</span>
                         </button>
@@ -90,7 +111,7 @@
                         <h2 class="font-bold text-base text-gray-800 flex items-center gap-2">
                             <span>📥</span> รายการสินค้าที่ถูกยืมอยู่ (Borrowed)
                         </h2>
-                        <button onclick="startScanner('CHECKIN')" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center space-x-2 transition">
+                        <button onclick="startScanner('CHECKIN')" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center space-x-2 transition shadow-md">
                             <span>📷</span>
                             <span>สแกน QR Code เพื่อคืน</span>
                         </button>
@@ -118,7 +139,7 @@
                             <label class="block text-xs font-semibold text-gray-600 mb-1">ชื่อสินค้า / รายละเอียด</label>
                             <input type="text" id="addEqName" placeholder="เช่น รถยกพาเลท #1" class="w-full px-3 py-2 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500">
                         </div>
-                        <button onclick="addEquipment()" class="w-full bg-indigo-600 text-white py-2.5 rounded-xl text-xs font-semibold hover:bg-indigo-700 transition">
+                        <button onclick="addEquipment()" class="w-full bg-indigo-600 text-white py-2.5 rounded-xl text-xs font-semibold hover:bg-indigo-700 transition shadow-md">
                             บันทึกสินค้าใหม่
                         </button>
                     </div>
@@ -222,11 +243,33 @@
         </div>
     </div>
 
+    <!-- Modal พิมพ์ QR Code (สำหรับสั่งพิมพ์ฉลาก) -->
+    <div id="printModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl space-y-4 text-center">
+            <h3 class="text-base font-bold text-gray-800 border-b pb-2">🖨️ พิมพ์ QR Code ฉลากสินค้า</h3>
+            
+            <!-- ส่วนที่จะถูกดึงไปพิมพ์ฉลาก -->
+            <div id="printSection" class="flex flex-col items-center justify-center p-4 border rounded-xl bg-slate-50">
+                <img id="printQrImg" src="" class="w-48 h-48 border p-2 bg-white rounded-lg mb-2" />
+                <div id="printEqName" class="font-bold text-sm text-gray-800"></div>
+                <div id="printEqId" class="text-xs font-mono text-gray-500"></div>
+            </div>
+
+            <div class="flex space-x-2 pt-2">
+                <button onclick="closeModal('printModal')" class="w-1/2 bg-gray-100 text-gray-700 py-2.5 rounded-xl text-xs font-semibold hover:bg-gray-200">ปิด</button>
+                <button onclick="window.print()" class="w-1/2 bg-indigo-600 text-white py-2.5 rounded-xl text-xs font-semibold hover:bg-indigo-700 transition flex items-center justify-center gap-1">
+                    <span>🖨️</span> พิมพ์
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let isLoginMode = true;
         let html5QrCode = null;
         let currentMode = '';
         let scannedEqId = '';
+        let globalEquipments = [];
 
         window.onload = function() {
             checkAuth();
@@ -336,6 +379,15 @@
             document.getElementById(modalId).style.display = 'none';
         }
 
+        function openPrintModal(eqId) {
+            const item = globalEquipments.find(e => e.id === eqId);
+            if (!item) return;
+            document.getElementById('printQrImg').src = item.qrcode;
+            document.getElementById('printEqName').innerText = item.name;
+            document.getElementById('printEqId').innerText = `Tag ID: ${item.id}`;
+            document.getElementById('printModal').style.display = 'flex';
+        }
+
         function startScanner(mode) {
             currentMode = mode;
             document.getElementById('scannerTitle').innerText = mode === 'CHECKOUT' ? '📷 สแกน QR เพื่อยืมสินค้า' : '📷 สแกน QR เพื่อคืนสินค้า';
@@ -441,7 +493,11 @@
                     document.getElementById('addEqPin').value = '';
                     document.getElementById('addEqId').value = '';
                     document.getElementById('addEqName').value = '';
-                    loadDashboard();
+                    
+                    // โหลดข้อมูลใหม่ และเปิดหน้าพิมพ์ QR Code สินค้าชิ้นนั้นทันที
+                    loadDashboard().then(() => {
+                        openPrintModal(eqId);
+                    });
                 }
             });
         }
@@ -504,10 +560,11 @@
         }
 
         function loadDashboard() {
-            fetch('/api/dashboard_data')
+            return fetch('/api/dashboard_data')
             .then(res => res.json())
             .then(data => {
-                renderEquipmentLists(data.equipments || []);
+                globalEquipments = data.equipments || [];
+                renderEquipmentLists(globalEquipments);
             });
         }
 
@@ -518,6 +575,7 @@
             const available = equipments.filter(e => e.status === 'AVAILABLE');
             const borrowed = equipments.filter(e => e.status === 'BORROWED');
 
+            // แสดงรายการสินค้าพร้อมยืม (เอาปุ่มยืมออก ให้เหลือเฉพาะสแกน และปุ่มพิมพ์ QR)
             availableContainer.innerHTML = available.length === 0 ? 
                 '<p class="text-xs text-gray-400 text-center col-span-2 py-8">ไม่มีสินค้าว่างพร้อมยืม</p>' : 
                 available.map(e => `
@@ -529,27 +587,23 @@
                                 <div class="text-[10px] font-mono text-gray-500">Tag: ${e.id}</div>
                             </div>
                         </div>
-                        <button onclick="triggerCheckoutModal('${e.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] px-3 py-1.5 rounded-lg font-medium transition shadow-sm">
-                            ยืมรายการนี้
+                        <button onclick="openPrintModal('${e.id}')" title="พิมพ์ QR Code" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1 border">
+                            <span>🖨️</span> พิมพ์
                         </button>
                     </div>
                 `).join('');
 
+            // แสดงรายการสินค้าที่ถูกยืม (เอาปุ่มคืนออก)
             borrowedContainer.innerHTML = borrowed.length === 0 ? 
                 '<p class="text-xs text-gray-400 text-center col-span-2 py-8">ไม่มีสินค้าที่กำลังถูกยืม</p>' : 
                 borrowed.map(e => `
                     <div class="border border-red-200 rounded-2xl p-4 bg-white shadow-sm space-y-3">
-                        <div class="flex justify-between items-start">
-                            <div class="flex items-center space-x-3">
-                                ${e.qrcode ? `<img src="${e.qrcode}" class="w-12 h-12 border p-0.5 rounded-lg shrink-0" />` : ''}
-                                <div>
-                                    <div class="font-bold text-xs text-gray-800">${e.name}</div>
-                                    <div class="text-[10px] font-mono text-gray-500">Tag: ${e.id}</div>
-                                </div>
+                        <div class="flex items-center space-x-3">
+                            ${e.qrcode ? `<img src="${e.qrcode}" class="w-12 h-12 border p-0.5 rounded-lg shrink-0" />` : ''}
+                            <div>
+                                <div class="font-bold text-xs text-gray-800">${e.name}</div>
+                                <div class="text-[10px] font-mono text-gray-500">Tag: ${e.id}</div>
                             </div>
-                            <button onclick="confirmCheckin('${e.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] px-3 py-1.5 rounded-lg font-medium transition shadow-sm">
-                                คืนรายการนี้
-                            </button>
                         </div>
                         <div class="bg-slate-50 p-2.5 rounded-xl text-[11px] space-y-1 text-gray-600 border border-slate-100">
                             <div class="flex justify-between"><span class="text-gray-400">📅 เวลาที่ยืม:</span><span class="font-mono text-gray-800">${e.borrowed_at || '-'}</span></div>

@@ -116,6 +116,27 @@ def register_equipment():
     save_json(EQUIPMENT_FILE, equipments)
     return jsonify({"success": True, "message": "เพิ่มสินค้าใหม่เรียบร้อยแล้ว"})
 
+@app.route('/api/delete_equipment', methods=['POST'])
+def delete_equipment():
+    data = request.json or {}
+    admin_pin = data.get('admin_pin')
+    eq_id = data.get('eq_id')
+    
+    config = load_json(CONFIG_FILE, {"admin_pin": "1234"})
+    if admin_pin != config.get('admin_pin'):
+        return jsonify({"success": False, "message": "Admin PIN ไม่ถูกต้อง"}), 403
+        
+    equipments = load_json(EQUIPMENT_FILE, {})
+    if eq_id not in equipments:
+        return jsonify({"success": False, "message": "ไม่พบสินค้านี้ในระบบ"}), 404
+        
+    if equipments[eq_id].get('status') == 'BORROWED':
+        return jsonify({"success": False, "message": "ไม่สามารถลบได้ เนื่องจากสินค้านี้กำลังถูกยืมอยู่"}), 400
+        
+    del equipments[eq_id]
+    save_json(EQUIPMENT_FILE, equipments)
+    return jsonify({"success": True, "message": "ลบสินค้าออกจากระบบเรียบร้อยแล้ว"})
+
 @app.route('/api/checkout', methods=['POST'])
 def checkout():
     data = request.json or {}
@@ -136,21 +157,17 @@ def checkout():
     if item['status'] != 'AVAILABLE':
         return jsonify({"success": False, "message": "สินค้านี้ถูกยืมอยู่ ไม่สามารถยืมซ้ำได้"}), 400
 
-    # ---------------------------------------------------------
-    # 🔍 เงื่อนไข: คนขับคนเดิม ยืมคนละทะเบียน -> แจ้งเตือนให้คืนก่อน
-    # ---------------------------------------------------------
+    # เงื่อนไข: คนขับคนเดิม ยืมคนละทะเบียน -> แจ้งเตือนให้คืนก่อน
     for eq_key, eq_val in equipments.items():
         if eq_val.get('status') == 'BORROWED':
             existing_driver = (eq_val.get('driver_name') or '').strip()
             existing_plate = (eq_val.get('plate_number') or '').strip()
 
-            # ถ้าชื่อผู้ขับตรงกัน แต่เลือกทะเบียนไม่ตรงกัน
             if existing_driver and existing_driver == driver and existing_plate != plate:
                 return jsonify({
                     "success": False,
                     "message": f"คุณ{driver} มีรายการยืมค้างอยู่กับทะเบียน {existing_plate} กรุณาคืนของก่อน หรือใช้ทะเบียนเดิมในการยืม"
                 }), 400
-    # ---------------------------------------------------------
         
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
@@ -161,7 +178,6 @@ def checkout():
     item['driver_name'] = driver
     save_json(EQUIPMENT_FILE, equipments)
     
-    # เพิ่ม Log การยืมลงไฟล์ logs.json
     logs = load_json(LOGS_FILE, [])
     log_entry = {
         "log_id": str(uuid.uuid4()),
@@ -173,7 +189,7 @@ def checkout():
         "plate_number": plate,
         "driver_name": driver
     }
-    logs.insert(0, log_entry) # นำรายการใหม่ขึ้นก่อน
+    logs.insert(0, log_entry)
     save_json(LOGS_FILE, logs)
     
     return jsonify({"success": True, "message": f"บันทึกการยืม {item['name']} เรียบร้อยแล้ว"})
@@ -198,7 +214,6 @@ def checkin():
         
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    # อัปเดตเวลาคืนใน Log ล่าสุดของอุปกรณ์นี้
     logs = load_json(LOGS_FILE, [])
     for log in logs:
         if log['eq_id'] == eq_id and log['returned_at'] is None:
@@ -207,7 +222,6 @@ def checkin():
             break
     save_json(LOGS_FILE, logs)
     
-    # เคลียร์สถานะอุปกรณ์
     item['status'] = 'AVAILABLE'
     item['borrowed_by'] = None
     item['borrowed_at'] = None

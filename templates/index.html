@@ -404,440 +404,322 @@
         }
     }
 
-    function switchTab(tabName, title) {
-        if (!isLoggedIn) return;
-        stopScanner();
+    function switchTab(tabId, title) {
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.sidebar-menu li').forEach(el => el.classList.remove('active'));
         
-        document.getElementById(`tab-${tabName}`).classList.add('active');
-        document.getElementById(`menu-${tabName}`).classList.add('active');
+        const targetTab = document.getElementById('tab-' + tabId);
+        const targetMenu = document.getElementById('menu-' + tabId);
+        if (targetTab) targetTab.classList.add('active');
+        if (targetMenu) targetMenu.classList.add('active');
+        
         document.getElementById('pageTitle').innerText = title;
         toggleSidebar();
-    }
-
-    async function performLogin() {
-        const u = document.getElementById('loginUser').value;
-        const p = document.getElementById('loginPass').value;
-        if (!u || !p) { alert("กรุณากรอก Username และ Password!"); return; }
-
-        const res = await fetch('/api/login', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ username: u, password: p })
-        });
-        const data = await res.json();
-        if (data.success) {
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('username', data.username);
-            showAppView(data.username);
-        } else {
-            alert(data.message);
-        }
+        loadDashboard();
     }
 
     function showAppView(username) {
         isLoggedIn = true;
         document.getElementById('loginView').style.display = 'none';
-        document.getElementById('mainNavbar').style.display = 'flex';
         document.getElementById('appView').style.display = 'block';
+        document.getElementById('mainNavbar').style.display = 'flex';
         document.getElementById('sideUser').innerText = username;
-        document.getElementById('changeNewUsername').value = username;
         loadDashboard();
-        setInterval(loadDashboard, 3000);
+    }
+
+    function performLogin() {
+        const u = document.getElementById('loginUser').value;
+        const p = document.getElementById('loginPass').value;
+        fetch('/api/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username: u, password: p})
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('username', data.username);
+                showAppView(data.username);
+            } else {
+                alert(data.message);
+            }
+        });
     }
 
     function logout() {
-        stopScanner();
-        localStorage.clear();
+        localStorage.removeItem('token');
+        localStorage.removeItem('username');
         location.reload();
     }
 
-    function openRegisterModal() {
-        document.getElementById('registerModal').style.display = 'flex';
-    }
+    function openRegisterModal() { document.getElementById('registerModal').style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
-    async function performRegister() {
+    function performRegister() {
         const u = document.getElementById('regUser').value;
         const p = document.getElementById('regPass').value;
         const n = document.getElementById('regName').value;
-
-        if (!u || !p || !n) { alert("กรอกข้อมูลให้ครบทุกช่อง!"); return; }
-
-        const res = await fetch('/api/register', {
+        fetch('/api/register', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ username: u, password: p, name: n })
+            body: JSON.stringify({username: u, password: p, name: n})
+        })
+        .then(res => res.json())
+        .then(data => {
+            alert(data.message);
+            if (data.success) closeModal('registerModal');
         });
-        const data = await res.json();
-        alert(data.message);
-        if (data.success) {
-            closeModal('registerModal');
-            document.getElementById('loginUser').value = u;
-            document.getElementById('loginPass').value = p;
-            performLogin();
-        }
     }
 
-    async function updateUsername() {
-        const newUsername = document.getElementById('changeNewUsername').value.trim();
-        const pass1 = document.getElementById('changeUserPassConfirm1').value;
-        const pass2 = document.getElementById('changeUserPassConfirm2').value;
-        const token = localStorage.getItem('token');
-
-        if (!newUsername || !pass1 || !pass2) { alert("กรุณากรอกข้อมูลให้ครบทุกช่อง!"); return; }
-        if (pass1 !== pass2) { alert("รหัสผ่านยืนยันทั้ง 2 ช่องไม่ตรงกัน!"); return; }
-
-        const res = await fetch('/api/change_username', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ token: token, new_username: newUsername, password_confirm: pass1 })
-        });
-        const data = await res.json();
-        alert(data.message);
-
-        if (data.success) {
-            localStorage.setItem('token', data.new_token);
-            localStorage.setItem('username', data.new_username);
-            document.getElementById('sideUser').innerText = data.new_username;
-            document.getElementById('changeUserPassConfirm1').value = '';
-            document.getElementById('changeUserPassConfirm2').value = '';
-            loadDashboard();
-        }
-    }
-
-    async function updatePassword() {
-        const oldPass = document.getElementById('oldPassInput').value;
-        const newPass = document.getElementById('newPassInput').value;
-        const confirmNewPass = document.getElementById('confirmNewPassInput').value;
-        const token = localStorage.getItem('token');
-
-        if (!oldPass || !newPass || !confirmNewPass) { alert("กรุณากรอกข้อมูลให้ครบทุกช่อง!"); return; }
-        if (newPass !== confirmNewPass) { alert("รหัสผ่านใหม่ และ รหัสผ่านยืนยัน ไม่ตรงกัน!"); return; }
-
-        const res = await fetch('/api/change_password', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ token: token, old_password: oldPass, new_password: newPass })
-        });
-        const data = await res.json();
-        alert(data.message);
-
-        if (data.success) {
-            document.getElementById('oldPassInput').value = '';
-            document.getElementById('newPassInput').value = '';
-            document.getElementById('confirmNewPassInput').value = '';
-            loadDashboard();
-        }
-    }
-
-    async function startScan(mode) {
+    function startScan(mode) {
         currentMode = mode;
-        await stopScanner();
-
         document.getElementById('reader-container').style.display = 'block';
         html5QrCode = new Html5Qrcode("reader");
-        const config = { fps: 10, qrbox: { width: 220, height: 220 } };
-
-        try {
-            const devices = await Html5Qrcode.getCameras();
-            if (devices && devices.length > 0) {
-                let backCamera = devices.find(device => {
-                    const label = device.label.toLowerCase();
-                    return label.includes('back') || label.includes('rear') || label.includes('environment');
-                });
-                let cameraId = backCamera ? backCamera.id : devices[devices.length - 1].id;
-                await html5QrCode.start(cameraId, config, onScanSuccess);
-            } else {
-                await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
-            }
-        } catch (err) {
-            try {
-                await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
-            } catch (fallbackErr) {
-                alert("ไม่สามารถเปิดกล้องได้ กรุณาตรวจสอบการอนุญาตกล้อง");
-                stopScanner();
-            }
-        }
+        html5QrCode.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            onScanSuccess
+        ).catch(err => alert("ไม่สามารถเปิดกล้องได้: " + err));
     }
 
-    async function stopScanner() {
+    function stopScanner() {
         if (html5QrCode) {
-            try { await html5QrCode.stop(); } catch (e) {}
-            html5QrCode = null;
+            html5QrCode.stop().then(() => {
+                document.getElementById('reader-container').style.display = 'none';
+            }).catch(() => {
+                document.getElementById('reader-container').style.display = 'none';
+            });
+        } else {
+            document.getElementById('reader-container').style.display = 'none';
         }
-        const container = document.getElementById('reader-container');
-        if (container) container.style.display = 'none';
     }
 
-    async function onScanSuccess(decodedText) {
+    function onScanSuccess(decodedText) {
+        stopScanner();
         scannedEqId = decodedText;
-        await stopScanner();
-
-        const targetEq = cachedEquipments.find(e => e.id === scannedEqId);
-
-        if (currentMode === "CHECKOUT") {
-            if (targetEq && targetEq.status === "BORROWED") {
-                alert("อุปกรณ์นี้ถูกยืมไปแล้ว!");
-                return;
-            }
+        if (currentMode === 'CHECKOUT') {
             document.getElementById('modalEqId').innerText = scannedEqId;
             document.getElementById('plateInput').value = '';
             document.getElementById('driverInput').value = '';
             document.getElementById('vehicleModal').style.display = 'flex';
-        } else if (currentMode === "CHECKIN") {
-            if (targetEq && targetEq.status === "AVAILABLE") {
-                alert("อุปกรณ์นี้ไม่ได้อยู่ในสถานะถูกยืม");
-                return;
-            }
-
-            const token = localStorage.getItem('token');
-            const res = await fetch('/api/checkin', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ eq_id: scannedEqId, token: token })
-            });
-            const data = await res.json();
-            alert(data.message);
-            loadDashboard();
+        } else if (currentMode === 'CHECKIN') {
+            confirmCheckin(scannedEqId);
         }
     }
 
-    async function confirmCheckout() {
-        const plate = document.getElementById('plateInput').value.trim();
-        const driver = document.getElementById('driverInput').value.trim();
+    function confirmCheckout() {
+        const plate = document.getElementById('plateInput').value;
+        const driver = document.getElementById('driverInput').value;
         const token = localStorage.getItem('token');
 
-        if (!plate) { alert("กรุณากรอกทะเบียนรถ!"); return; }
+        if (!plate) { alert('กรุณาระบุทะเบียนรถ'); return; }
 
-        const res = await fetch('/api/checkout', {
+        fetch('/api/checkout', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ eq_id: scannedEqId, plate_number: plate, driver_name: driver, token: token })
+            body: JSON.stringify({
+                token: token,
+                eq_id: scannedEqId,
+                plate_number: plate,
+                driver_name: driver
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            alert(data.message);
+            if (data.success) {
+                closeModal('vehicleModal');
+                loadDashboard();
+            }
         });
-        const data = await res.json();
-        alert(data.message);
-        closeModal('vehicleModal');
-        loadDashboard();
     }
 
-    function printQrTag(eqId, eqName, qrSrc) {
-        const printSec = document.getElementById('printSection');
-        printSec.innerHTML = `
-            <div style="border: 2px dashed #000; padding: 20px; display: inline-block; border-radius: 8px;">
-                <h2 style="margin-bottom: 5px;">${eqName}</h2>
-                <img src="${qrSrc}" style="width: 180px; height: 180px; margin: 10px 0;">
-                <p style="font-size: 16px; font-weight: bold; font-family: monospace;">${eqId}</p>
-                <p style="font-size: 11px; color: #555; margin-top: 5px;">CHECKPOINT EQUIPMENT TAG</p>
-            </div>
-        `;
-        printSec.style.display = 'block';
-        window.print();
-        printSec.style.display = 'none';
+    function confirmCheckin(eqId) {
+        const token = localStorage.getItem('token');
+        fetch('/api/checkin', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ token: token, eq_id: eqId })
+        })
+        .then(res => res.json())
+        .then(data => {
+            alert(data.message);
+            if (data.success) loadDashboard();
+        });
     }
 
-    async function deleteItem(eqId) {
-        const pin = prompt(`กรอก Admin Action PIN เพื่อยืนยันการลบ ${eqId}:`);
-        if (!pin) return;
-
-        const formData = new FormData();
-        formData.append("eq_id", eqId);
-        formData.append("pin", pin);
-        formData.append("token", localStorage.getItem('token'));
-
-        const res = await fetch('/api/equipment/delete', { method: 'POST', body: formData });
-        const data = await res.json();
-        alert(data.message);
-        if (data.success) loadDashboard();
-    }
-
-    async function editItem(eqId, oldName) {
-        const newName = prompt(`แก้ไขชื่ออุปกรณ์ (${eqId}):`, oldName);
-        if (!newName || newName === oldName) return;
-
-        const pin = prompt("กรอก Admin Action PIN เพื่อยืนยันการแก้ไข:");
-        if (!pin) return;
-
-        const formData = new FormData();
-        formData.append("eq_id", eqId);
-        formData.append("name", newName);
-        formData.append("pin", pin);
-        formData.append("token", localStorage.getItem('token'));
-
-        const res = await fetch('/api/equipment/edit', { method: 'POST', body: formData });
-        const data = await res.json();
-        alert(data.message);
-        if (data.success) loadDashboard();
-    }
-
-    async function addEquipment() {
+    function addEquipment() {
         const pin = document.getElementById('addEqPin').value;
         const eqId = document.getElementById('addEqId').value;
         const name = document.getElementById('addEqName').value;
 
-        if (!pin || !eqId || !name) { alert("กรอกข้อมูลให้ครบถ้วน!"); return; }
-
         const formData = new FormData();
-        formData.append("eq_id", eqId);
-        formData.append("name", name);
-        formData.append("admin_pin", pin);
+        formData.append('admin_pin', pin);
+        formData.append('eq_id', eqId);
+        formData.append('name', name);
 
-        const res = await fetch('/api/register_equipment', { method: 'POST', body: formData });
-        const data = await res.json();
-        alert(data.message);
-        if (data.success) {
-            document.getElementById('addEqId').value = '';
-            document.getElementById('addEqName').value = '';
-            loadDashboard();
-        }
+        fetch('/api/register_equipment', { method: 'POST', body: formData })
+        .then(res => res.json())
+        .then(data => {
+            alert(data.message);
+            if (data.success) loadDashboard();
+        });
     }
 
-    async function changeAdminPin() {
-        const oldP = document.getElementById('oldPinInput').value;
-        const newP = document.getElementById('newPinInput').value;
-
-        if (!oldP || !newP) { alert("กรอกข้อมูลให้ครบ!"); return; }
-
-        const formData = new FormData();
-        formData.append("old_pin", oldP);
-        formData.append("new_pin", newP);
-
-        const res = await fetch('/api/change_admin_pin', { method: 'POST', body: formData });
-        const data = await res.json();
-        alert(data.message);
-        if (data.success) loadDashboard();
-    }
-
-    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-
-    // ฟังก์ชันช่วยสกัดรายละเอียดจาก Log string
-    function parseLogDetails(detailsStr) {
-        let plate = "-", driver = "-";
-        if (!detailsStr) return { plate, driver };
-        
-        const plateMatch = detailsStr.match(/Plate:\s*([^,]+)/i);
-        const driverMatch = detailsStr.match(/Driver:\s*([^,]+)/i);
-        
-        if (plateMatch && plateMatch[1]) plate = plateMatch[1].trim();
-        if (driverMatch && driverMatch[1]) driver = driverMatch[1].trim();
-        return { plate, driver };
-    }
-
-    async function loadDashboard() {
-        if (!isLoggedIn) return;
-
+    function loadDashboard() {
         const yTrans = document.getElementById('filterYearTrans').value;
         const mTrans = document.getElementById('filterMonthTrans').value;
         const dTrans = document.getElementById('filterDayTrans').value;
 
-        const yOp = document.getElementById('filterYearOp').value;
-        const mOp = document.getElementById('filterMonthOp').value;
-        const dOp = document.getElementById('filterDayOp').value;
+        fetch(`/api/dashboard_data?year=${yTrans}&month=${mTrans}&day=${dTrans}`)
+        .then(res => res.json())
+        .then(data => {
+            cachedEquipments = data.equipments;
+            renderEquipmentLists(data.equipments);
+            renderLogs(data.logs);
+        });
+    }
 
-        const res = await fetch(`/api/dashboard_data?year=${yTrans}&month=${mTrans}&day=${dTrans}`);
-        const data = await res.json();
-        
-        cachedEquipments = data.equipments || [];
+    function renderEquipmentLists(equipments) {
+        const borrowedContainer = document.getElementById('borrowedEquipmentList');
+        const availableContainer = document.getElementById('availableEquipmentList');
 
-        const eqMap = {};
-        cachedEquipments.forEach(e => { eqMap[e.id] = e.name; });
+        const borrowed = equipments.filter(e => e.status === 'BORROWED');
+        const available = equipments.filter(e => e.status === 'AVAILABLE');
 
-        let borrowedHtml = "";
-        let availableHtml = "";
-
-        cachedEquipments.forEach(e => {
-            const isAvail = e.status === "AVAILABLE";
-            const cardHtml = `
-            <div class="item-card">
-                <div class="item-header">
-                    <div>
-                        <b style="font-size:15px; color:var(--accent-color);">${e.id}</b> - ${e.name}<br>
-                        <span class="badge ${isAvail ? 'badge-avail' : 'badge-borrowed'}" style="margin-top:6px; display:inline-block;">
-                            ${isAvail ? 'ว่าง' : 'ถูกยืม'}
-                        </span>
+        borrowedContainer.innerHTML = borrowed.length === 0 ? '<p style="color:#6b7280;">ไม่มีรายการที่ถูกยืม</p>' : 
+            borrowed.map(e => `
+                <div class="item-card">
+                    <div class="item-header">
+                        <b>${e.name} (${e.id})</b>
+                        <span class="badge badge-borrowed">ถูกยืม</span>
                     </div>
-                    <div>
-                        <button onclick="editItem('${e.id}', '${e.name}')" style="background:none; border:none; color:var(--accent-color); margin-right:8px; cursor:pointer;">✏️</button>
-                        <button onclick="deleteItem('${e.id}')" style="background:none; border:none; color:var(--danger-color); cursor:pointer;">🗑️</button>
+                    <div class="qrcode-box">
+                        <img class="qrcode-img" src="${e.qrcode}" />
+                        <div class="qrcode-text">${e.id}</div>
                     </div>
                 </div>
-                
-                <div class="qrcode-box">
-                    <img src="${e.qrcode}" class="qrcode-img" alt="QR Code ${e.id}">
-                    <div class="qrcode-text">${e.id}</div>
+            `).join('');
+
+        availableContainer.innerHTML = available.length === 0 ? '<p style="color:#6b7280;">ไม่มีรายการที่ว่าง</p>' : 
+            available.map(e => `
+                <div class="item-card">
+                    <div class="item-header">
+                        <b>${e.name} (${e.id})</b>
+                        <span class="badge badge-avail">ว่าง</span>
+                    </div>
+                    <div class="qrcode-box">
+                        <img class="qrcode-img" src="${e.qrcode}" />
+                        <div class="qrcode-text">${e.id}</div>
+                    </div>
                 </div>
-                <button class="btn btn-secondary" onclick="printQrTag('${e.id}', '${e.name}', '${e.qrcode}')" style="margin-top:8px; padding:6px; font-size:12px;">🖨️ พิมพ์ Tag QR Code</button>
-            </div>`;
+            `).join('');
+    }
 
-            if (isAvail) availableHtml += cardHtml;
-            else borrowedHtml += cardHtml;
-        });
+    function renderLogs(logs) {
+        const transBody = document.getElementById('transLogTableBody');
+        const opBody = document.getElementById('opLogTableBody');
 
-        document.getElementById('borrowedEquipmentList').innerHTML = borrowedHtml || "<small style='color:#6b7280;'>ไม่มีอุปกรณ์ที่ถูกยืมในขณะนี้</small>";
-        document.getElementById('availableEquipmentList').innerHTML = availableHtml || "<small style='color:#6b7280;'>ไม่มีอุปกรณ์ว่างในระบบ</small>";
+        const transLogs = logs.filter(l => l.action === 'CHECKOUT' || l.action === 'CHECKIN');
+        const opLogs = logs.filter(l => l.action === 'SYSTEM');
 
-        // --- Render ตาราง Transaction Logs ---
-        const rawLogs = data.logs || [];
-        
-        // แยก Logs ตามประเภท
-        const checkoutLogs = [];
-        const checkinLogs = [];
-        const opLogs = [];
+        transBody.innerHTML = transLogs.length === 0 ? '<tr><td colspan="7" style="text-align:center;">ไม่พบข้อมูล Log</td></tr>' :
+            transLogs.map(l => {
+                let plate = '-', driver = '-';
+                if (l.details.includes('Plate:')) {
+                    const parts = l.details.split('|');
+                    if (parts[1]) {
+                        const pInfo = parts[1].split(',');
+                        plate = pInfo[0] ? pInfo[0].replace('Plate:', '').trim() : '-';
+                        driver = pInfo[1] ? pInfo[1].replace('Driver:', '').trim() : '-';
+                    }
+                }
+                const timeBorrow = l.action === 'CHECKOUT' ? l.timestamp : '-';
+                const timeReturn = l.action === 'CHECKIN' ? l.timestamp : '-';
 
-        rawLogs.forEach(l => {
-            const act = l.action || "";
-            const dt = l.details || "";
-            if (act === "CHECKOUT" || dt.includes("Checkout") || dt.includes("ยืม")) {
-                checkoutLogs.push(l);
-            } else if (act === "CHECKIN" || dt.includes("Checkin") || dt.includes("คืน")) {
-                checkinLogs.push(l);
-            } else {
-                opLogs.push(l);
-            }
-        });
+                return `
+                    <tr>
+                        <td>${l.username}</td>
+                        <td>${timeBorrow}</td>
+                        <td>${timeReturn}</td>
+                        <td>${l.eq_id}</td>
+                        <td>${plate}</td>
+                        <td>${driver}</td>
+                        <td>${l.eq_id}</td>
+                    </tr>
+                `;
+            }).join('');
 
-        // แมป Checkout กับ Checkin เข้าตาราง
-        let transRowsHtml = "";
-        
-        checkoutLogs.forEach(co => {
-            const parsed = parseLogDetails(co.details);
-            const prodName = eqMap[co.eq_id] || "ไม่ระบุ";
-            
-            // หา Log การคืนที่เกิดขึ้นหลังจาก ยืม อุปกรณ์ตัวนี้
-            const matchIn = checkinLogs.find(ci => ci.eq_id === co.eq_id && new Date(ci.timestamp) >= new Date(co.timestamp));
-            
-            const returnTimeStr = matchIn 
-                ? matchIn.timestamp 
-                : `<span style="color:var(--danger-color); font-weight:bold;">&lt;ยังไม่คืน&gt;</span>`;
-
-            transRowsHtml += `
-                <tr>
-                    <td><b>${co.username}</b></td>
-                    <td>${co.timestamp}</td>
-                    <td>${returnTimeStr}</td>
-                    <td>${prodName}</td>
-                    <td><b style="color:var(--accent-color);">${parsed.plate}</b></td>
-                    <td>${parsed.driver}</td>
-                    <td><code>${co.eq_id}</code></td>
-                </tr>
-            `;
-        });
-
-        // Render ตาราง Operator Logs
-        let opRowsHtml = "";
-        opLogs.forEach(l => {
-            opRowsHtml += `
+        opBody.innerHTML = opLogs.length === 0 ? '<tr><td colspan="4" style="text-align:center;">ไม่พบข้อมูล Log</td></tr>' :
+            opLogs.map(l => `
                 <tr>
                     <td>${l.timestamp}</td>
-                    <td><b>${l.username}</b></td>
-                    <td><span style="color:var(--purple-color); font-weight:bold;">${l.action || 'SYSTEM'}</span></td>
-                    <td>${l.details} (รหัส: ${l.eq_id || '-'})</td>
+                    <td>${l.username}</td>
+                    <td>${l.action}</td>
+                    <td>${l.details}</td>
                 </tr>
-            `;
-        });
+            `).join('');
+    }
 
-        document.getElementById('transLogTableBody').innerHTML = transRowsHtml || `<tr><td colspan="7" style="text-align:center; color:#6b7280;">ไม่พบประวัติการยืม-คืน</td></tr>`;
-        document.getElementById('opLogTableBody').innerHTML = opRowsHtml || `<tr><td colspan="4" style="text-align:center; color:#6b7280;">ไม่พบประวัติ Operator</td></tr>`;
+    function updateUsername() {
+        const newU = document.getElementById('changeNewUsername').value;
+        const p1 = document.getElementById('changeUserPassConfirm1').value;
+        const p2 = document.getElementById('changeUserPassConfirm2').value;
+
+        if (p1 !== p2) { alert('รหัสผ่านยืนยันไม่ตรงกัน'); return; }
+
+        fetch('/api/change_username', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                token: localStorage.getItem('token'),
+                new_username: newU,
+                password_confirm: p1
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            alert(data.message);
+            if (data.success) {
+                localStorage.setItem('token', data.new_token);
+                localStorage.setItem('username', data.new_username);
+                document.getElementById('sideUser').innerText = data.new_username;
+            }
+        });
+    }
+
+    function updatePassword() {
+        const oldP = document.getElementById('oldPassInput').value;
+        const newP = document.getElementById('newPassInput').value;
+        const confP = document.getElementById('confirmNewPassInput').value;
+
+        if (newP !== confP) { alert('รหัสผ่านใหม่ยืนยันไม่ตรงกัน'); return; }
+
+        fetch('/api/change_password', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                token: localStorage.getItem('token'),
+                old_password: oldP,
+                new_password: newP
+            })
+        })
+        .then(res => res.json())
+        .then(data => alert(data.message));
+    }
+
+    function changeAdminPin() {
+        const oldPin = document.getElementById('oldPinInput').value;
+        const newPin = document.getElementById('newPinInput').value;
+
+        const formData = new FormData();
+        formData.append('old_pin', oldPin);
+        formData.append('new_pin', newPin);
+
+        fetch('/api/change_admin_pin', { method: 'POST', body: formData })
+        .then(res => res.json())
+        .then(data => alert(data.message));
     }
 </script>
 </body>

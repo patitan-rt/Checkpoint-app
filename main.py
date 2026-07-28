@@ -121,8 +121,8 @@ def checkout():
     data = request.json or {}
     token = data.get('token')
     eq_id = data.get('eq_id')
-    plate = data.get('plate_number')
-    driver = data.get('driver_name')
+    plate = (data.get('plate_number') or '').strip()
+    driver = (data.get('driver_name') or '').strip()
     
     username = get_current_user(token)
     if not username:
@@ -135,6 +135,22 @@ def checkout():
     item = equipments[eq_id]
     if item['status'] != 'AVAILABLE':
         return jsonify({"success": False, "message": "สินค้านี้ถูกยืมอยู่ ไม่สามารถยืมซ้ำได้"}), 400
+
+    # ---------------------------------------------------------
+    # 🔍 เงื่อนไข: คนขับคนเดิม ยืมคนละทะเบียน -> แจ้งเตือนให้คืนก่อน
+    # ---------------------------------------------------------
+    for eq_key, eq_val in equipments.items():
+        if eq_val.get('status') == 'BORROWED':
+            existing_driver = (eq_val.get('driver_name') or '').strip()
+            existing_plate = (eq_val.get('plate_number') or '').strip()
+
+            # ถ้าชื่อผู้ขับตรงกัน แต่เลือกทะเบียนไม่ตรงกัน
+            if existing_driver and existing_driver == driver and existing_plate != plate:
+                return jsonify({
+                    "success": False,
+                    "message": f"คุณ{driver} มีรายการยืมค้างอยู่กับทะเบียน {existing_plate} กรุณาคืนของก่อน หรือใช้ทะเบียนเดิมในการยืม"
+                }), 400
+    # ---------------------------------------------------------
         
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     

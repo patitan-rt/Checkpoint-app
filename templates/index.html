@@ -360,71 +360,36 @@
 </div>
 
 <script>
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
-
-    let currentMode = "";
-    let scannedEqId = "";
+    let currentMode = '';
+    let scannedEqId = '';
     let html5QrCode = null;
-    let isLoggedIn = false;
     let cachedEquipments = [];
+    let activeTab = localStorage.getItem('activeTab') || 'tab-borrowed'; // เก็บ/ดึง Tab ล่าสุด
 
-    window.addEventListener('DOMContentLoaded', () => {
-        const populateDays = (selectId) => {
-            const daySelect = document.getElementById(selectId);
-            if (!daySelect) return;
-            for (let i = 1; i <= 31; i++) {
-                const opt = document.createElement('option');
-                opt.value = i;
-                opt.innerText = i;
-                daySelect.appendChild(opt);
-            }
-        };
-        populateDays('filterDayTrans');
-        populateDays('filterDayOp');
-
+    // เมื่อโหลดหน้าเว็บ ให้ดึงข้อมูลและเปิด Tab ล่าสุดทันที
+    document.addEventListener('DOMContentLoaded', () => {
         const token = localStorage.getItem('token');
-        const user = localStorage.getItem('username');
-        if (token && user) {
-            showAppView(user);
-        } else {
-            document.getElementById('mainNavbar').style.display = 'none';
+        const username = localStorage.getItem('username');
+        if (token && username) {
+            showAppView(username);
+            switchTab(activeTab); // ย้ายไป Tab ล่าสุดที่เคยเปิดไว้
         }
     });
 
-    function toggleSidebar() {
-        if (!isLoggedIn) return;
-        const sb = document.getElementById('sidebar');
-        const overlay = document.getElementById('sidebarOverlay');
-        if (sb.classList.contains('active')) {
-            sb.classList.remove('active');
-            overlay.style.display = 'none';
-        } else {
-            sb.classList.add('active');
-            overlay.style.display = 'block';
-        }
-    }
-
-    function switchTab(tabId, title) {
-        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.sidebar-menu li').forEach(el => el.classList.remove('active'));
+    // ฟังก์ชันสำหรับสลับ Tab และจำค่าไว้ใน localStorage
+    function switchTab(tabId) {
+        activeTab = tabId;
+        localStorage.setItem('activeTab', tabId);
         
-        const targetTab = document.getElementById('tab-' + tabId);
-        const targetMenu = document.getElementById('menu-' + tabId);
-        if (targetTab) targetTab.classList.add('active');
-        if (targetMenu) targetMenu.classList.add('active');
-        
-        document.getElementById('pageTitle').innerText = title;
-        toggleSidebar();
-        loadDashboard();
-    }
+        // ซ่อนทุก Tab Content แล้วแสดงอันที่เลือก
+        document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+        const targetTab = document.getElementById(tabId);
+        if (targetTab) targetTab.style.display = 'block';
 
-    function showAppView(username) {
-        isLoggedIn = true;
-        document.getElementById('loginView').style.display = 'none';
-        document.getElementById('appView').style.display = 'block';
-        document.getElementById('mainNavbar').style.display = 'flex';
-        document.getElementById('sideUser').innerText = username;
-        loadDashboard();
+        // ปรับ Active State ของปุ่ม Tab
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        const activeBtn = document.querySelector(`[onclick="switchTab('${tabId}')"]`);
+        if (activeBtn) activeBtn.classList.add('active');
     }
 
     function performLogin() {
@@ -441,6 +406,7 @@
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('username', data.username);
                 showAppView(data.username);
+                loadDashboard();
             } else {
                 alert(data.message);
             }
@@ -450,6 +416,7 @@
     function logout() {
         localStorage.removeItem('token');
         localStorage.removeItem('username');
+        localStorage.removeItem('activeTab');
         location.reload();
     }
 
@@ -581,6 +548,7 @@
         });
     }
 
+    // เพิ่มปุ่มสั่งพิมพ์ QR Code ในรายการอุปกรณ์
     function renderEquipmentLists(equipments) {
         const borrowedContainer = document.getElementById('borrowedEquipmentList');
         const availableContainer = document.getElementById('availableEquipmentList');
@@ -588,41 +556,64 @@
         const borrowed = equipments.filter(e => e.status === 'BORROWED');
         const available = equipments.filter(e => e.status === 'AVAILABLE');
 
-        borrowedContainer.innerHTML = borrowed.length === 0 ? '<p style="color:#6b7280;">ไม่มีรายการที่ถูกยืม</p>' : 
-            borrowed.map(e => `
-                <div class="item-card">
-                    <div class="item-header">
-                        <b>${e.name} (${e.id})</b>
-                        <span class="badge badge-borrowed">ถูกยืม</span>
-                    </div>
-                    <div class="qrcode-box">
-                        <img class="qrcode-img" src="${e.qrcode}" />
-                        <div class="qrcode-text">${e.id}</div>
-                    </div>
+        const cardTemplate = (e, statusBadge) => `
+            <div class="item-card">
+                <div class="item-header">
+                    <b>${e.name} (${e.id})</b>
+                    ${statusBadge}
                 </div>
-            `).join('');
+                <div class="qrcode-box">
+                    <img class="qrcode-img" id="qr-img-${e.id}" src="${e.qrcode}" />
+                    <div class="qrcode-text">${e.id}</div>
+                    <button class="btn-print" onclick="printQRCode('${e.id}', '${e.name}', '${e.qrcode}')" style="margin-top:8px; padding:4px 8px; cursor:pointer;">
+                        🖨️ พิมพ์ QR Code
+                    </button>
+                </div>
+            </div>
+        `;
+
+        borrowedContainer.innerHTML = borrowed.length === 0 ? '<p style="color:#6b7280;">ไม่มีรายการที่ถูกยืม</p>' : 
+            borrowed.map(e => cardTemplate(e, '<span class="badge badge-borrowed">ถูกยืม</span>')).join('');
 
         availableContainer.innerHTML = available.length === 0 ? '<p style="color:#6b7280;">ไม่มีรายการที่ว่าง</p>' : 
-            available.map(e => `
-                <div class="item-card">
-                    <div class="item-header">
-                        <b>${e.name} (${e.id})</b>
-                        <span class="badge badge-avail">ว่าง</span>
-                    </div>
-                    <div class="qrcode-box">
-                        <img class="qrcode-img" src="${e.qrcode}" />
-                        <div class="qrcode-text">${e.id}</div>
-                    </div>
-                </div>
-            `).join('');
+            available.map(e => cardTemplate(e, '<span class="badge badge-avail">ว่าง</span>')).join('');
     }
 
+    // ฟังก์ชันสั่งพิมพ์ QR Code เฉพาะชิ้น
+    function printQRCode(id, name, qrSrc) {
+        const printWindow = window.open('', '_blank', 'width=400,height=400');
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>Print QR - ${id}</title>
+                    <style>
+                        body { font-family: sans-serif; text-align: center; padding: 20px; }
+                        img { width: 200px; height: 200px; }
+                        .title { font-weight: bold; font-size: 16px; margin-bottom: 5px; }
+                        .id { color: #555; font-size: 14px; margin-top: 5px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="title">${name}</div>
+                    <img src="${qrSrc}" />
+                    <div class="id">ID: ${id}</div>
+                    <script>
+                        window.onload = function() { window.print(); window.close(); }
+                    <\/script>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+    }
+
+    // ปรับแต่ง Log ยืม-คืน และเพิ่ม Log เวลามีการ Login เข้าระบบ
     function renderLogs(logs) {
         const transBody = document.getElementById('transLogTableBody');
         const opBody = document.getElementById('opLogTableBody');
 
         const transLogs = logs.filter(l => l.action === 'CHECKOUT' || l.action === 'CHECKIN');
-        const opLogs = logs.filter(l => l.action === 'SYSTEM');
+        // รวม SYSTEM log และ LOGIN log เข้าด้วยกัน
+        const opLogs = logs.filter(l => l.action === 'SYSTEM' || l.action === 'LOGIN');
 
         transBody.innerHTML = transLogs.length === 0 ? '<tr><td colspan="7" style="text-align:center;">ไม่พบข้อมูล Log</td></tr>' :
             transLogs.map(l => {
@@ -635,8 +626,16 @@
                         driver = pInfo[1] ? pInfo[1].replace('Driver:', '').trim() : '-';
                     }
                 }
+                
                 const timeBorrow = l.action === 'CHECKOUT' ? l.timestamp : '-';
-                const timeReturn = l.action === 'CHECKIN' ? l.timestamp : '-';
+                
+                // หากคืนแล้วแสดงเวลา ถ้ายังไม่คืนให้แสดงตัวหนังสือสีแดง "ยังไม่คืน"
+                let timeReturn = '-';
+                if (l.action === 'CHECKIN') {
+                    timeReturn = l.timestamp;
+                } else if (l.action === 'CHECKOUT') {
+                    timeReturn = '<span style="color: red; font-weight: bold;">ยังไม่คืน</span>';
+                }
 
                 return `
                     <tr>
@@ -653,10 +652,10 @@
 
         opBody.innerHTML = opLogs.length === 0 ? '<tr><td colspan="4" style="text-align:center;">ไม่พบข้อมูล Log</td></tr>' :
             opLogs.map(l => `
-                <tr>
+                <tr ${l.action === 'LOGIN' ? 'style="background-color: #f0fdf4;"' : ''}>
                     <td>${l.timestamp}</td>
                     <td>${l.username}</td>
-                    <td>${l.action}</td>
+                    <td><b>${l.action}</b></td>
                     <td>${l.details}</td>
                 </tr>
             `).join('');

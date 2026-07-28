@@ -27,7 +27,7 @@ def load_json(filepath, default):
     with open(filepath, 'r', encoding='utf-8') as f:
         try:
             return json.load(f)
-        except:
+        except Exception:
             return default
 
 def save_json(filepath, data):
@@ -71,19 +71,38 @@ def get_user_by_token(token):
 def index():
     return render_template('index.html')
 
+# 🟢 แก้ไข: Safe Handler สำหรับ manifest.json ป้องกัน 404
 @app.route('/manifest.json')
 def manifest():
-    return send_from_directory('static', 'manifest.json')
+    try:
+        return send_from_directory('static', 'manifest.json')
+    except Exception:
+        return jsonify({
+            "name": "Checkpoint App",
+            "short_name": "Checkpoint",
+            "start_url": "/",
+            "display": "standalone",
+            "background_color": "#ffffff",
+            "theme_color": "#000000"
+        })
 
+# 🟢 แก้ไข: Safe Handler สำหรับ Service Worker ป้องกัน 404
 @app.route('/sw.js')
 def service_worker():
-    return send_from_directory('static', 'sw.js')
+    try:
+        return send_from_directory('static', 'sw.js')
+    except Exception:
+        return "", 200, {'Content-Type': 'application/javascript'}
 
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.get_json() or {}
     username = data.get('username')
     password = data.get('password')
+    
+    if not username or not password:
+        return jsonify({'success': False, 'message': 'กรุณากรอก Username และ Password'}), 400
+
     users = load_json(USERS_FILE, [])
     
     user = next((u for u in users if u['username'] == username and u['password'] == password), None)
@@ -91,16 +110,21 @@ def login():
         token = secrets.token_hex(16)
         tokens[token] = username
         
-        # 🟢 เพิ่มการบันทึก Log เมื่อเข้าสู่ระบบสำเร็จ
+        # บันทึก Log เมื่อเข้าสู่ระบบสำเร็จ
         add_log(username, "-", "LOGIN", "เข้าสู่ระบบสำเร็จ")
         
         return jsonify({'success': True, 'token': token, 'username': username})
+        
     return jsonify({'success': False, 'message': 'Username หรือ Password ไม่ถูกต้อง'}), 401
 
 @app.route('/api/register', methods=['POST'])
 def register():
     data = request.get_json() or {}
     u, p, n = data.get('username'), data.get('password'), data.get('name')
+    
+    if not u or not p or not n:
+        return jsonify({'success': False, 'message': 'กรอกข้อมูลไม่ครบถ้วน'}), 400
+
     users = load_json(USERS_FILE, [])
     if any(usr['username'] == u for usr in users):
         return jsonify({'success': False, 'message': 'Username นี้ถูกใช้ไปแล้ว'}), 400
@@ -108,7 +132,7 @@ def register():
     users.append({"username": u, "password": p, "name": n})
     save_json(USERS_FILE, users)
     
-    # 🟢 บันทึก Log เมื่อลงทะเบียนผู้ใช้ใหม่
+    # บันทึก Log เมื่อลงทะเบียนผู้ใช้ใหม่
     add_log(u, "-", "SYSTEM", f"ลงทะเบียนผู้ใช้งานใหม่: {n}")
     
     return jsonify({'success': True, 'message': 'ลงทะเบียนสำเร็จ'})
@@ -121,7 +145,8 @@ def change_username():
     pass_confirm = data.get('password_confirm')
     
     old_user = get_user_by_token(token)
-    if not old_user: return jsonify({'success': False, 'message': 'Session หมดอายุ'}), 401
+    if not old_user: 
+        return jsonify({'success': False, 'message': 'Session หมดอายุ'}), 401
     
     users = load_json(USERS_FILE, [])
     u_obj = next((u for u in users if u['username'] == old_user and u['password'] == pass_confirm), None)
@@ -149,7 +174,8 @@ def change_password():
     new_p = data.get('new_password')
     
     username = get_user_by_token(token)
-    if not username: return jsonify({'success': False, 'message': 'Session หมดอายุ'}), 401
+    if not username: 
+        return jsonify({'success': False, 'message': 'Session หมดอายุ'}), 401
     
     users = load_json(USERS_FILE, [])
     u_obj = next((u for u in users if u['username'] == username and u['password'] == old_p), None)
@@ -179,47 +205,44 @@ def register_equipment():
     equipments.append({"id": eq_id, "name": name, "status": "AVAILABLE", "qrcode": qr_b64})
     save_json(EQUIPMENT_FILE, equipments)
     
-    # 🟢 บันทึก Log เมื่อเพิ่มอุปกรณ์
     add_log("ADMIN", eq_id, "SYSTEM", f"เพิ่มอุปกรณ์ใหม่: {name}")
-    
     return jsonify({'success': True, 'message': f'เพิ่มอุปกรณ์ {name} ({eq_id}) เรียบร้อยแล้ว'})
 
 @app.route('/api/equipment/edit', methods=['POST'])
 def edit_equipment():
     pin = request.form.get('pin')
     config = load_json(CONFIG_FILE, {})
-    if pin != config.get('admin_pin'): return jsonify({'success': False, 'message': 'Admin PIN ไม่ถูกต้อง'}), 403
+    if pin != config.get('admin_pin'): 
+        return jsonify({'success': False, 'message': 'Admin PIN ไม่ถูกต้อง'}), 403
 
     eq_id = request.form.get('eq_id')
     new_name = request.form.get('name')
     equipments = load_json(EQUIPMENT_FILE, [])
     
     eq = next((e for e in equipments if e['id'] == eq_id), None)
-    if not eq: return jsonify({'success': False, 'message': 'ไม่พบอุปกรณ์'}), 404
+    if not eq: 
+        return jsonify({'success': False, 'message': 'ไม่พบอุปกรณ์'}), 404
     
     old_name = eq.get('name', '')
     eq['name'] = new_name
     save_json(EQUIPMENT_FILE, equipments)
     
-    # 🟢 บันทึก Log เมื่อแก้ไขอุปกรณ์
     add_log("ADMIN", eq_id, "SYSTEM", f"แก้ไขชื่ออุปกรณ์จาก {old_name} เป็น {new_name}")
-    
     return jsonify({'success': True, 'message': 'แก้ไขข้อมูลอุปกรณ์เรียบร้อย'})
 
 @app.route('/api/equipment/delete', methods=['POST'])
 def delete_equipment():
     pin = request.form.get('pin')
     config = load_json(CONFIG_FILE, {})
-    if pin != config.get('admin_pin'): return jsonify({'success': False, 'message': 'Admin PIN ไม่ถูกต้อง'}), 403
+    if pin != config.get('admin_pin'): 
+        return jsonify({'success': False, 'message': 'Admin PIN ไม่ถูกต้อง'}), 403
 
     eq_id = request.form.get('eq_id')
     equipments = load_json(EQUIPMENT_FILE, [])
     equipments = [e for e in equipments if e['id'] != eq_id]
     save_json(EQUIPMENT_FILE, equipments)
     
-    # 🟢 บันทึก Log เมื่อลบอุปกรณ์
     add_log("ADMIN", eq_id, "SYSTEM", f"ลบอุปกรณ์ออกจากระบบ")
-    
     return jsonify({'success': True, 'message': 'ลบอุปกรณ์เรียบร้อย'})
 
 @app.route('/api/checkout', methods=['POST'])
@@ -231,20 +254,20 @@ def checkout():
     driver = data.get('driver_name', '-').strip() or '-'
 
     username = get_user_by_token(token)
-    if not username: return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    if not username: 
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
 
     equipments = load_json(EQUIPMENT_FILE, [])
     eq = next((e for e in equipments if e['id'] == eq_id), None)
-    if not eq: return jsonify({'success': False, 'message': 'ไม่พบรหัสอุปกรณ์ในระบบ'}), 404
-    if eq['status'] == 'BORROWED': return jsonify({'success': False, 'message': 'อุปกรณ์นี้ถูกยืมไปแล้ว'}), 400
+    if not eq: 
+        return jsonify({'success': False, 'message': 'ไม่พบรหัสอุปกรณ์ในระบบ'}), 404
+    if eq['status'] == 'BORROWED': 
+        return jsonify({'success': False, 'message': 'อุปกรณ์นี้ถูกยืมไปแล้ว'}), 400
 
-    # -------------------------------------------------------------
     # LOGIC CHECK: ตรวจสอบการยืมค้างของคนขับต่างทะเบียนรถ
-    # -------------------------------------------------------------
     if driver != '-':
         logs = load_json(LOGS_FILE, [])
         active_borrows = {}
-        # วนลูป Logs จากอดีตมาปัจจุบัน เพื่อหาสถานะยืมค้างล่าสุด
         for l in reversed(logs):
             if l.get('action') in ['CHECKOUT', 'CHECKIN']:
                 det = l.get('details', '')
@@ -257,7 +280,6 @@ def checkout():
                     elif l['action'] == 'CHECKIN' and eid in active_borrows:
                         del active_borrows[eid]
 
-        # ค้นหาว่าคนขับคนนี้มีรายการยืมค้างในระบบอยู่หรือไม่
         for e_id, info in active_borrows.items():
             if info['driver'] == driver and info['plate'] != plate:
                 return jsonify({
@@ -265,11 +287,9 @@ def checkout():
                     'message': f"ไม่อนุญาต: คุณ {driver} มีรายการยืมอุปกรณ์ ({e_id}) ค้างอยู่ที่รถทะเบียน [{info['plate']}] โปรด คืนสินค้าเดิม ก่อนยืมด้วยรถทะเบียน [{plate}]"
                 }), 400
 
-    # บันทึกสถานะอุปกรณ์เป็น BORROWED
     eq['status'] = 'BORROWED'
     save_json(EQUIPMENT_FILE, equipments)
 
-    # บันทึกรูปแบบมาตรฐาน
     add_log(username, eq_id, "CHECKOUT", f"Checkout | Plate: {plate}, Driver: {driver}")
     return jsonify({'success': True, 'message': f'ยืมอุปกรณ์ {eq_id} สำเร็จ'})
 
@@ -280,11 +300,13 @@ def checkin():
     eq_id = data.get('eq_id')
 
     username = get_user_by_token(token)
-    if not username: return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+    if not username: 
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
 
     equipments = load_json(EQUIPMENT_FILE, [])
     eq = next((e for e in equipments if e['id'] == eq_id), None)
-    if not eq: return jsonify({'success': False, 'message': 'ไม่พบรหัสอุปกรณ์ในระบบ'}), 404
+    if not eq: 
+        return jsonify({'success': False, 'message': 'ไม่พบรหัสอุปกรณ์ในระบบ'}), 404
 
     eq['status'] = 'AVAILABLE'
     save_json(EQUIPMENT_FILE, equipments)
@@ -303,9 +325,7 @@ def change_admin_pin():
     config['admin_pin'] = new_pin
     save_json(CONFIG_FILE, config)
     
-    # 🟢 บันทึก Log เมื่อเปลี่ยน Admin PIN
     add_log("ADMIN", "-", "SYSTEM", "เปลี่ยนรหัส Admin PIN")
-    
     return jsonify({'success': True, 'message': 'เปลี่ยน Admin PIN สำเร็จ'})
 
 @app.route('/api/dashboard_data', methods=['GET'])
@@ -317,7 +337,6 @@ def dashboard_data():
     equipments = load_json(EQUIPMENT_FILE, [])
     logs = load_json(LOGS_FILE, [])
 
-    # Filter Logs ตามวันที่
     filtered_logs = []
     for l in logs:
         try:
@@ -326,7 +345,7 @@ def dashboard_data():
             if month != 'ALL' and str(dt.month) != str(month): continue
             if day != 'ALL' and str(dt.day) != str(day): continue
             filtered_logs.append(l)
-        except:
+        except Exception:
             filtered_logs.append(l)
 
     return jsonify({'equipments': equipments, 'logs': filtered_logs})

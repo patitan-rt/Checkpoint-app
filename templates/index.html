@@ -273,11 +273,30 @@
         </div>
     </div>
 
+    <!-- Modal ยืนยันการลบสินค้า -->
+    <div id="deleteModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl space-y-4">
+            <h3 class="text-base font-bold text-red-600 flex items-center gap-2">
+                <span>🗑️</span> ยืนยันการลบสินค้า
+            </h3>
+            <p class="text-xs text-gray-600">ต้องการลบสินค้า <span id="deleteEqName" class="font-bold text-gray-800"></span> (<span id="deleteEqId" class="font-mono text-indigo-600"></span>) ออกจากระบบหรือไม่?</p>
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">กรอก Admin PIN เพื่อยืนยัน <span class="text-red-500">*</span></label>
+                <input type="password" id="deleteAdminPin" placeholder="ระบุ Admin PIN" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-red-500 outline-none">
+            </div>
+            <div class="flex space-x-2 pt-2">
+                <button onclick="closeModal('deleteModal')" class="w-1/2 bg-gray-100 text-gray-700 py-2.5 rounded-xl text-xs font-semibold hover:bg-gray-200">ยกเลิก</button>
+                <button onclick="confirmDeleteEquipment()" class="w-1/2 bg-red-600 text-white py-2.5 rounded-xl text-xs font-semibold hover:bg-red-700 transition">ยืนยันการลบ</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let isLoginMode = true;
         let html5QrCode = null;
         let currentMode = '';
         let scannedEqId = '';
+        let targetDeleteEqId = '';
         let globalEquipments = [];
 
         window.onload = function() { checkAuth(); };
@@ -385,6 +404,35 @@
             document.getElementById('printEqName').innerText = item.name;
             document.getElementById('printEqId').innerText = `Tag ID: ${item.id}`;
             document.getElementById('printModal').style.display = 'flex';
+        }
+
+        function openDeleteModal(eqId) {
+            const item = globalEquipments.find(e => e.id === eqId);
+            if (!item) return;
+            targetDeleteEqId = eqId;
+            document.getElementById('deleteEqName').innerText = item.name;
+            document.getElementById('deleteEqId').innerText = item.id;
+            document.getElementById('deleteAdminPin').value = '';
+            document.getElementById('deleteModal').style.display = 'flex';
+        }
+
+        function confirmDeleteEquipment() {
+            const pin = document.getElementById('deleteAdminPin').value;
+            if (!pin) { alert('กรุณากรอก Admin PIN'); return; }
+
+            fetch('/api/delete_equipment', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ eq_id: targetDeleteEqId, admin_pin: pin })
+            })
+            .then(res => res.json())
+            .then(data => {
+                alert(data.message);
+                if (data.success) {
+                    closeModal('deleteModal');
+                    loadDashboard();
+                }
+            });
         }
 
         function startScanner(mode) {
@@ -579,9 +627,14 @@
                                 <div class="text-[10px] font-mono text-gray-500">Tag: ${e.id}</div>
                             </div>
                         </div>
-                        <button onclick="openPrintModal('${e.id}')" title="พิมพ์ QR Code" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1 border">
-                            <span>🖨️</span> พิมพ์
-                        </button>
+                        <div class="flex items-center space-x-1">
+                            <button onclick="openPrintModal('${e.id}')" title="พิมพ์ QR Code" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-2.5 py-1.5 rounded-lg font-medium transition flex items-center gap-1 border">
+                                <span>🖨️</span> พิมพ์
+                            </button>
+                            <button onclick="openDeleteModal('${e.id}')" title="ลบสินค้า" class="bg-red-50 hover:bg-red-100 text-red-600 text-xs px-2.5 py-1.5 rounded-lg font-medium transition flex items-center gap-1 border border-red-200">
+                                <span>🗑️</span> ลบ
+                            </button>
+                        </div>
                     </div>
                 `).join('');
 

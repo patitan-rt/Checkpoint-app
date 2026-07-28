@@ -2,391 +2,314 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ระบบยืม-คืนอุปกรณ์</title>
-    
-    <!-- Google Fonts & Tailwind CSS -->
-    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Equipment & Vehicle Management</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- HTML5 QR Code Scanner Library -->
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-
+    <!-- Html5-QRCode Library -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        body {
-            font-family: 'Kanit', sans-serif;
-            background-color: #f1f5f9;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        #reader {
-            width: 100% !important;
-            border: none !important;
-        }
-        #reader video {
-            object-fit: cover !important;
-            border-radius: 0.75rem;
-        }
-
         .badge {
+            font-size: 10px;
             padding: 2px 8px;
             border-radius: 9999px;
-            font-size: 0.75rem;
             font-weight: 600;
         }
-        .badge-borrowed { background-color: #fee2e2; color: #dc2626; }
-        .badge-avail { background-color: #d1fae5; color: #059669; }
+        .badge-borrowed {
+            background-color: #FEE2E2;
+            color: #991B1B;
+        }
+        .badge-avail {
+            background-color: #D1FAE5;
+            color: #065F46;
+        }
     </style>
 </head>
-<body class="bg-slate-100 min-h-screen select-none">
+<body class="bg-gray-100 text-gray-800 font-sans min-h-screen">
 
-    <!-- ==================== SECTION 1: AUTH SECTION (LOGIN / REGISTER) ==================== -->
-    <div id="authSection" class="min-h-screen flex items-center justify-center p-4 bg-slate-900">
-        
-        <!-- 1.1 LOGIN CARD -->
-        <div id="loginCard" class="bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 sm:p-8 space-y-6">
-            <div class="text-center space-y-2">
-                <div class="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl mb-2 text-3xl">
-                    📦
-                </div>
-                <h2 class="text-2xl font-bold text-gray-800">เข้าสู่ระบบ</h2>
-                <p class="text-xs text-gray-500">ระบบจัดการยืม-คืนอุปกรณ์และรถขนส่ง</p>
-            </div>
-
-            <form onsubmit="handleLogin(event)" class="space-y-4">
+    <!-- Auth Section -->
+    <div id="authContainer" class="min-h-screen flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-2xl shadow-xl w-full max-w-sm border border-gray-100">
+            <h2 id="authTitle" class="text-2xl font-bold text-center text-gray-800 mb-6">เข้าสู่ระบบ</h2>
+            
+            <form id="authForm" onsubmit="handleAuth(event)" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-semibold text-gray-700 mb-1">ชื่อผู้ใช้งาน (Username)</label>
-                    <input type="text" id="loginUsername" required placeholder="กรอกชื่อผู้ใช้งาน" 
-                           class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 text-sm outline-none transition">
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">ชื่อผู้ใช้งาน (Username)</label>
+                    <input type="text" id="username" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 </div>
-
                 <div>
-                    <label class="block text-xs font-semibold text-gray-700 mb-1">รหัสผ่าน (Password)</label>
-                    <input type="password" id="loginPassword" required placeholder="กรอกรหัสผ่าน" 
-                           class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 text-sm outline-none transition">
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">รหัสผ่าน (Password)</label>
+                    <input type="password" id="password" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 </div>
-
-                <div id="loginError" class="hidden text-red-500 text-xs text-center font-medium bg-red-50 p-2.5 rounded-lg border border-red-200"></div>
-
-                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white font-semibold py-3 rounded-xl text-sm shadow-md transition">
-                    เข้าสู่ระบบ
-                </button>
+                <div id="authError" class="text-red-500 text-xs hidden text-center"></div>
+                <button type="submit" id="authBtn" class="w-full bg-indigo-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition">เข้าสู่ระบบ</button>
             </form>
 
-            <div class="text-center pt-2 border-t border-gray-100">
-                <p class="text-xs text-gray-500">
-                    ยังไม่มีบัญชีใช้งาน? 
-                    <button onclick="toggleAuthMode('register')" class="text-indigo-600 font-bold hover:underline">สมัครสมาชิกที่นี่</button>
-                </p>
+            <div class="mt-4 text-center">
+                <button id="toggleAuthBtn" onclick="toggleAuthMode()" class="text-xs text-indigo-600 hover:underline font-medium">ยังไม่มีบัญชี? สมัครสมาชิก</button>
             </div>
         </div>
-
-        <!-- 1.2 REGISTER CARD -->
-        <div id="registerCard" class="hidden bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 sm:p-8 space-y-6">
-            <div class="text-center space-y-2">
-                <div class="inline-flex items-center justify-center w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl mb-2 text-3xl">
-                    📝
-                </div>
-                <h2 class="text-2xl font-bold text-gray-800">สมัครสมาชิก</h2>
-                <p class="text-xs text-gray-500">สร้างบัญชีผู้ใช้งานใหม่เพื่อเข้าใช้ระบบ</p>
-            </div>
-
-            <form onsubmit="handleRegister(event)" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold text-gray-700 mb-1">ชื่อผู้ใช้งาน (Username)</label>
-                    <input type="text" id="regUsername" required placeholder="ตั้งชื่อผู้ใช้งาน" 
-                           class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 text-sm outline-none transition">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-gray-700 mb-1">รหัสผ่าน (Password)</label>
-                    <input type="password" id="regPassword" required placeholder="ตั้งรหัสผ่าน" 
-                           class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 text-sm outline-none transition">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-gray-700 mb-1">ยืนยันรหัสผ่าน (Confirm Password)</label>
-                    <input type="password" id="regConfirmPassword" required placeholder="กรอกรหัสผ่านอีกครั้ง" 
-                           class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 text-sm outline-none transition">
-                </div>
-
-                <div id="regError" class="hidden text-red-500 text-xs text-center font-medium bg-red-50 p-2.5 rounded-lg border border-red-200"></div>
-
-                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-semibold py-3 rounded-xl text-sm shadow-md transition">
-                    ลงทะเบียน
-                </button>
-            </form>
-
-            <div class="text-center pt-2 border-t border-gray-100">
-                <p class="text-xs text-gray-500">
-                    มีบัญชีอยู่แล้ว? 
-                    <button onclick="toggleAuthMode('login')" class="text-emerald-600 font-bold hover:underline">เข้าสู่ระบบ</button>
-                </p>
-            </div>
-        </div>
-
     </div>
 
-
-    <!-- ==================== SECTION 2: MAIN DASHBOARD ==================== -->
-    <div id="appSection" class="hidden min-h-screen pb-20">
-        
-        <!-- Top Header Bar -->
-        <header class="bg-slate-800 text-white px-4 py-3 sticky top-0 z-30 shadow-md flex justify-between items-center">
-            <div class="flex items-center space-x-2">
-                <span class="text-xl">📦</span>
-                <div>
-                    <h1 class="font-bold text-base text-indigo-400 leading-tight">EQ System</h1>
-                    <p id="sideUser" class="text-xs text-slate-300">กำลังโหลด...</p>
-                </div>
-            </div>
-            <button onclick="logout()" class="text-xs bg-red-600 hover:bg-red-700 active:bg-red-800 px-3 py-1.5 rounded-lg text-white font-medium transition shadow">
-                🚪 ออกจากระบบ
-            </button>
-        </header>
-
-        <!-- Main Container -->
-        <main class="p-4 max-w-lg mx-auto space-y-4">
-
-            <!-- Action Quick Buttons (Scan Borrow/Return) -->
-            <div class="grid grid-cols-2 gap-3">
-                <button onclick="startScanner('CHECKOUT')" class="bg-amber-500 active:bg-amber-600 text-white p-3.5 rounded-xl shadow-md font-semibold text-sm flex items-center justify-center space-x-2 transition">
-                    <span class="text-lg">📤</span>
-                    <span>สแกนยืมอุปกรณ์</span>
-                </button>
-                <button onclick="startScanner('CHECKIN')" class="bg-emerald-600 active:bg-emerald-700 text-white p-3.5 rounded-xl shadow-md font-semibold text-sm flex items-center justify-center space-x-2 transition">
-                    <span class="text-lg">📥</span>
-                    <span>สแกนคืนอุปกรณ์</span>
-                </button>
-            </div>
-
-            <!-- View 1: Dashboard (Default View) -->
-            <section id="dashView" class="tab-content space-y-4">
-                <!-- Borrowed Section -->
-                <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                    <h3 class="text-sm font-bold text-gray-800 mb-3 flex items-center space-x-2">
-                        <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
-                        <span>รายการที่ถูกยืมอยู่</span>
-                    </h3>
-                    <div id="borrowedEquipmentList" class="space-y-2"></div>
-                </div>
-
-                <!-- Available Section -->
-                <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                    <h3 class="text-sm font-bold text-gray-800 mb-3 flex items-center space-x-2">
-                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                        <span>อุปกรณ์ว่างพร้อมใช้งาน</span>
-                    </h3>
-                    <div id="availableEquipmentList" class="space-y-2"></div>
-                </div>
-            </section>
-
-            <!-- View 2: Equipment List (แยกแท็บสถานะ) -->
-            <section id="equipView" class="tab-content hidden space-y-3">
-                <div class="flex justify-between items-center px-1">
-                    <h3 class="text-sm font-bold text-gray-700">รายการอุปกรณ์ทั้งหมด</h3>
-                </div>
-
-                <!-- Sub-tabs แยกสถานะ -->
-                <div class="flex bg-gray-200 p-1 rounded-xl text-xs font-semibold">
-                    <button onclick="switchEquipFilter('ALL')" id="filterBtn-ALL" class="flex-1 py-2 text-center rounded-lg bg-white shadow text-gray-800 transition">
-                        ทั้งหมด
-                    </button>
-                    <button onclick="switchEquipFilter('BORROWED')" id="filterBtn-BORROWED" class="flex-1 py-2 text-center rounded-lg text-gray-500 transition">
-                        🔴 ถูกยืมอยู่
-                    </button>
-                    <button onclick="switchEquipFilter('AVAILABLE')" id="filterBtn-AVAILABLE" class="flex-1 py-2 text-center rounded-lg text-gray-500 transition">
-                        🟢 ว่างพร้อมใช้
-                    </button>
-                </div>
-
-                <!-- List Content -->
-                <div id="allEquipmentList" class="space-y-3 pt-1"></div>
-            </section>
-
-            <!-- View 3: Add Equipment -->
-            <section id="addEquipView" class="tab-content hidden bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-4">
-                <h3 class="text-base font-bold text-gray-800 border-b pb-2">➕ เพิ่มอุปกรณ์ใหม่เข้าระบบ</h3>
-                <div class="space-y-3">
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">รหัสอุปกรณ์ (Equipment ID)</label>
-                        <input type="text" id="addEqId" placeholder="เช่น EQ-001" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">ชื่ออุปกรณ์</label>
-                        <input type="text" id="addEqName" placeholder="เช่น สว่านไร้สาย" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">รหัส PIN Admin</label>
-                        <input type="password" id="addEqPin" placeholder="กรอก PIN Admin เพื่อยืนยัน" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-                    </div>
-                    <button onclick="addEquipment()" class="w-full bg-indigo-600 active:bg-indigo-700 text-white font-medium py-3 rounded-lg text-sm transition shadow">
-                        บันทึกอุปกรณ์ใหม่
-                    </button>
-                </div>
-            </section>
-
-            <!-- View 4: Transaction Logs -->
-            <section id="transLogView" class="tab-content hidden bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3">
-                <h3 class="text-base font-bold text-gray-800">📝 ประวัติการยืม-คืน</h3>
-                <div class="grid grid-cols-3 gap-2">
-                    <input type="number" id="filterYearTrans" placeholder="ปี YYYY" class="border border-gray-300 rounded-lg p-2 text-xs text-center outline-none">
-                    <input type="number" id="filterMonthTrans" placeholder="เดือน MM" class="border border-gray-300 rounded-lg p-2 text-xs text-center outline-none">
-                    <input type="number" id="filterDayTrans" placeholder="วัน DD" class="border border-gray-300 rounded-lg p-2 text-xs text-center outline-none">
-                </div>
-                <button onclick="loadDashboard()" class="w-full bg-slate-800 text-white py-2 rounded-lg text-xs font-medium shadow">กรองข้อมูล</button>
-                
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-xs whitespace-nowrap">
-                        <thead>
-                            <tr class="bg-slate-100 text-slate-600 border-b">
-                                <th class="p-2">ผู้ยืม</th>
-                                <th class="p-2">เที่ยวยืม</th>
-                                <th class="p-2">เที่ยวคืน</th>
-                                <th class="p-2">รหัสอุปกรณ์</th>
-                                <th class="p-2">ทะเบียน</th>
-                                <th class="p-2">คนขับ</th>
-                            </tr>
-                        </thead>
-                        <tbody id="transLogTableBody" class="divide-y divide-gray-100"></tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- View 5: Settings -->
-            <section id="settingsView" class="tab-content hidden space-y-4">
-                <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3">
-                    <h3 class="text-sm font-bold text-gray-800 border-b pb-2">เปลี่ยน Username</h3>
-                    <input type="text" id="changeNewUsername" placeholder="Username ใหม่" class="w-full border rounded-lg p-2 text-xs outline-none">
-                    <input type="password" id="changeUserPassConfirm1" placeholder="ยืนยันรหัสผ่าน" class="w-full border rounded-lg p-2 text-xs outline-none">
-                    <input type="password" id="changeUserPassConfirm2" placeholder="ยืนยันรหัสผ่านอีกครั้ง" class="w-full border rounded-lg p-2 text-xs outline-none">
-                    <button onclick="updateUsername()" class="w-full bg-indigo-600 text-white py-2 rounded-lg text-xs font-medium">อัปเดต Username</button>
-                </div>
-
-                <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3">
-                    <h3 class="text-sm font-bold text-gray-800 border-b pb-2">เปลี่ยน Password</h3>
-                    <input type="password" id="oldPassInput" placeholder="รหัสผ่านปัจจุบัน" class="w-full border rounded-lg p-2 text-xs outline-none">
-                    <input type="password" id="newPassInput" placeholder="รหัสผ่านใหม่" class="w-full border rounded-lg p-2 text-xs outline-none">
-                    <input type="password" id="confirmNewPassInput" placeholder="ยืนยันรหัสผ่านใหม่" class="w-full border rounded-lg p-2 text-xs outline-none">
-                    <button onclick="updatePassword()" class="w-full bg-indigo-600 text-white py-2 rounded-lg text-xs font-medium">เปลี่ยนรหัสผ่าน</button>
-                </div>
-
-                <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3">
-                    <h3 class="text-sm font-bold text-gray-800 border-b pb-2">เปลี่ยน PIN Admin</h3>
-                    <input type="password" id="oldPinInput" placeholder="PIN เดิม" class="w-full border rounded-lg p-2 text-xs outline-none">
-                    <input type="password" id="newPinInput" placeholder="PIN ใหม่" class="w-full border rounded-lg p-2 text-xs outline-none">
-                    <button onclick="changeAdminPin()" class="w-full bg-indigo-600 text-white py-2 rounded-lg text-xs font-medium">อัปเดต PIN</button>
-                </div>
-            </section>
-
-        </main>
-
-        <!-- Camera Scanner Fullscreen Modal -->
-        <div id="reader-container" class="fixed inset-0 bg-black/90 z-50 hidden flex-col justify-between p-4">
-            <div class="flex justify-between items-center text-white mb-2">
-                <span id="scannerTitle" class="font-bold text-sm">กล้องสแกน QR Code</span>
-                <button onclick="stopScanner()" class="bg-red-600 text-white px-3 py-1 rounded-lg text-xs font-bold">ปิดหน้าต่าง</button>
-            </div>
-            <div class="flex-1 flex items-center justify-center">
-                <div id="reader" class="w-full"></div>
-            </div>
-            <p class="text-center text-xs text-gray-400 mt-2">ส่องกล้องไปที่ QR Code ของอุปกรณ์</p>
-        </div>
-
-        <!-- Vehicle Details Modal -->
-        <div id="vehicleModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 p-4">
-            <div class="bg-white rounded-xl w-full max-w-xs p-5 space-y-3 shadow-2xl">
-                <h3 class="text-sm font-bold text-gray-800">ยืมอุปกรณ์: <span id="modalEqId" class="text-indigo-600"></span></h3>
-                <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">ทะเบียนรถ <span class="text-red-500">*</span></label>
-                    <input type="text" id="plateInput" placeholder="เช่น กข-1234" class="w-full border border-gray-300 rounded-lg p-2 text-xs outline-none">
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">ชื่อคนขับรถ</label>
-                    <input type="text" id="driverInput" placeholder="เช่น นายสมชาย" class="w-full border border-gray-300 rounded-lg p-2 text-xs outline-none">
-                </div>
-                <div class="flex justify-end space-x-2 pt-2">
-                    <button onclick="closeModal('vehicleModal')" class="px-3 py-1.5 border rounded-lg text-xs text-gray-600">ยกเลิก</button>
-                    <button onclick="confirmCheckout()" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium">ยืนยัน</button>
-                </div>
+    <!-- Main App Section -->
+    <div id="appContainer" class="hidden min-h-screen flex flex-col pb-16">
+        <!-- Top Bar -->
+        <div class="bg-indigo-600 text-white p-4 shadow-md flex justify-between items-center sticky top-0 z-10">
+            <h1 class="font-bold text-base">ระบบจัดการอุปกรณ์</h1>
+            <div class="flex items-center space-x-3">
+                <span id="sideUser" class="text-xs font-medium bg-indigo-700 px-2.5 py-1 rounded-full">👤 User</span>
+                <button onclick="logout()" class="text-xs bg-red-500 hover:bg-red-600 text-white px-2.5 py-1 rounded-full font-medium transition">ออกจากระบบ</button>
             </div>
         </div>
 
-        <!-- Bottom Mobile Navigation Bar -->
-        <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-2 py-1 z-30 flex justify-around items-center shadow-lg">
-            <button onclick="switchTab('dashView')" id="nav-dashView" class="nav-btn flex flex-col items-center py-1 px-2 text-indigo-600 font-medium text-[10px]">
+        <!-- Main Content Area -->
+        <div class="p-4 flex-1 max-w-2xl mx-auto w-full">
+            
+            <!-- Dashboard Tab -->
+            <div id="dashboardView" class="tab-content space-y-4">
+                <!-- Action Buttons -->
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="startScanner('CHECKOUT')" class="bg-indigo-600 text-white p-4 rounded-xl shadow-sm font-semibold text-sm hover:bg-indigo-700 transition flex flex-col items-center justify-center space-y-1">
+                        <span class="text-2xl">📤</span>
+                        <span>ยืมอุปกรณ์</span>
+                    </button>
+                    <button onclick="startScanner('CHECKIN')" class="bg-emerald-600 text-white p-4 rounded-xl shadow-sm font-semibold text-sm hover:bg-emerald-700 transition flex flex-col items-center justify-center space-y-1">
+                        <span class="text-2xl">📥</span>
+                        <span>คืนอุปกรณ์</span>
+                    </button>
+                </div>
+
+                <!-- Equipment Lists Summary -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                        <h3 class="font-bold text-sm text-gray-700 mb-2 flex items-center justify-between">
+                            <span>🔴 กำลังถูกยืม</span>
+                        </h3>
+                        <div id="borrowedEquipmentList" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                        <h3 class="font-bold text-sm text-gray-700 mb-2 flex items-center justify-between">
+                            <span>🟢 พร้อมใช้งาน</span>
+                        </h3>
+                        <div id="availableEquipmentList" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
+                    </div>
+                </div>
+
+                <!-- Transaction Logs Table -->
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                    <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-3">
+                        <h3 class="font-bold text-sm text-gray-700">📜 ประวัติการทำรายการ</h3>
+                        <div class="flex items-center space-x-1">
+                            <input type="number" id="filterYearTrans" placeholder="ปี (YYYY)" class="w-20 px-2 py-1 text-xs border rounded">
+                            <input type="number" id="filterMonthTrans" placeholder="เดือน (MM)" class="w-20 px-2 py-1 text-xs border rounded">
+                            <input type="number" id="filterDayTrans" placeholder="วัน (DD)" class="w-16 px-2 py-1 text-xs border rounded">
+                            <button onclick="loadDashboard()" class="bg-gray-800 text-white px-2.5 py-1 text-xs rounded hover:bg-gray-700">กรอง</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-gray-50 border-b text-gray-600">
+                                    <th class="p-2">ผู้ใช้งาน</th>
+                                    <th class="p-2">เวลายืม</th>
+                                    <th class="p-2">เวลาคืน</th>
+                                    <th class="p-2">ID อุปกรณ์</th>
+                                    <th class="p-2">ทะเบียน</th>
+                                    <th class="p-2">คนขับ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transLogTableBody" class="divide-y"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- All Equipments Tab -->
+            <div id="equipView" class="tab-content hidden space-y-4">
+                <div class="flex justify-between items-center bg-white p-2 rounded-xl border border-gray-100">
+                    <div class="flex space-x-1 text-xs font-semibold">
+                        <button id="filterBtn-ALL" onclick="switchEquipFilter('ALL')" class="px-3 py-1.5 rounded-lg bg-white shadow text-gray-800">ทั้งหมด</button>
+                        <button id="filterBtn-BORROWED" onclick="switchEquipFilter('BORROWED')" class="px-3 py-1.5 rounded-lg text-gray-500">ถูกยืม</button>
+                        <button id="filterBtn-AVAILABLE" onclick="switchEquipFilter('AVAILABLE')" class="px-3 py-1.5 rounded-lg text-gray-500">ว่าง</button>
+                    </div>
+                </div>
+                <div id="allEquipmentList" class="space-y-2"></div>
+            </div>
+
+            <!-- Admin Tab -->
+            <div id="adminView" class="tab-content hidden space-y-4">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                    <h3 class="font-bold text-sm text-gray-800 mb-3">➕ เพิ่มอุปกรณ์ใหม่ (Admin Only)</h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">รหัส Admin PIN</label>
+                            <input type="password" id="addEqPin" class="w-full px-3 py-2 border rounded-lg text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">ID อุปกรณ์</label>
+                            <input type="text" id="addEqId" class="w-full px-3 py-2 border rounded-lg text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">ชื่ออุปกรณ์</label>
+                            <input type="text" id="addEqName" class="w-full px-3 py-2 border rounded-lg text-sm">
+                        </div>
+                        <button onclick="addEquipment()" class="w-full bg-indigo-600 text-white py-2 rounded-lg text-xs font-semibold hover:bg-indigo-700">บันทึกอุปกรณ์</button>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                    <h3 class="font-bold text-sm text-gray-800 mb-3">🔑 เปลี่ยน Admin PIN</h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">Admin PIN เดิม</label>
+                            <input type="password" id="oldPinInput" class="w-full px-3 py-2 border rounded-lg text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">Admin PIN ใหม่</label>
+                            <input type="password" id="newPinInput" class="w-full px-3 py-2 border rounded-lg text-sm">
+                        </div>
+                        <button onclick="changeAdminPin()" class="w-full bg-indigo-600 text-white py-2 rounded-lg text-xs font-semibold hover:bg-indigo-700">เปลี่ยน Admin PIN</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Settings Tab -->
+            <div id="settingsView" class="tab-content hidden space-y-4">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                    <h3 class="font-bold text-sm text-gray-800 mb-3">👤 เปลี่ยนชื่อผู้ใช้งาน (Username)</h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">ชื่อผู้ใช้ใหม่</label>
+                            <input type="text" id="changeNewUsername" class="w-full px-3 py-2 border rounded-lg text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">ยืนยันรหัสผ่านเดิม</label>
+                            <input type="password" id="changeUserPassConfirm1" class="w-full px-3 py-2 border rounded-lg text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">ยืนยันรหัสผ่านเดิมอีกครั้ง</label>
+                            <input type="password" id="changeUserPassConfirm2" class="w-full px-3 py-2 border rounded-lg text-sm">
+                        </div>
+                        <button onclick="updateUsername()" class="w-full bg-indigo-600 text-white py-2 rounded-lg text-xs font-semibold hover:bg-indigo-700">อัปเดต Username</button>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                    <h3 class="font-bold text-sm text-gray-800 mb-3">🔒 เปลี่ยนรหัสผ่าน</h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">รหัสผ่านปัจจุบัน</label>
+                            <input type="password" id="oldPassInput" class="w-full px-3 py-2 border rounded-lg text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">รหัสผ่านใหม่</label>
+                            <input type="password" id="newPassInput" class="w-full px-3 py-2 border rounded-lg text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">ยืนยันรหัสผ่านใหม่</label>
+                            <input type="password" id="confirmNewPassInput" class="w-full px-3 py-2 border rounded-lg text-sm">
+                        </div>
+                        <button onclick="updatePassword()" class="w-full bg-indigo-600 text-white py-2 rounded-lg text-xs font-semibold hover:bg-indigo-700">อัปเดตรหัสผ่าน</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Bottom Navigation Bar -->
+        <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around py-2 z-10">
+            <button id="nav-dashboardView" onclick="switchTab('dashboardView')" class="nav-btn flex flex-col items-center text-indigo-600">
                 <span class="text-lg">📊</span>
-                <span>หน้าแรก</span>
+                <span class="text-[10px] font-medium">แดชบอร์ด</span>
             </button>
-            <button onclick="switchTab('equipView')" id="nav-equipView" class="nav-btn flex flex-col items-center py-1 px-2 text-gray-400 font-medium text-[10px]">
+            <button id="nav-equipView" onclick="switchTab('equipView')" class="nav-btn flex flex-col items-center text-gray-400">
                 <span class="text-lg">📦</span>
-                <span>อุปกรณ์</span>
+                <span class="text-[10px] font-medium">อุปกรณ์ทั้งหมด</span>
             </button>
-            <button onclick="switchTab('addEquipView')" id="nav-addEquipView" class="nav-btn flex flex-col items-center py-1 px-2 text-gray-400 font-medium text-[10px]">
-                <span class="text-lg">➕</span>
-                <span>เพิ่มสิ่งของ</span>
-            </button>
-            <button onclick="switchTab('transLogView')" id="nav-transLogView" class="nav-btn flex flex-col items-center py-1 px-2 text-gray-400 font-medium text-[10px]">
-                <span class="text-lg">📝</span>
-                <span>ประวัติ</span>
-            </button>
-            <button onclick="switchTab('settingsView')" id="nav-settingsView" class="nav-btn flex flex-col items-center py-1 px-2 text-gray-400 font-medium text-[10px]">
+            <button id="nav-adminView" onclick="switchTab('adminView')" class="nav-btn flex flex-col items-center text-gray-400">
                 <span class="text-lg">⚙️</span>
-                <span>ตั้งค่า</span>
+                <span class="text-[10px] font-medium">แอดมิน</span>
             </button>
-        </nav>
-
+            <button id="nav-settingsView" onclick="switchTab('settingsView')" class="nav-btn flex flex-col items-center text-gray-400">
+                <span class="text-lg">👤</span>
+                <span class="text-[10px] font-medium">ตั้งค่าส่วนตัว</span>
+            </button>
+        </div>
     </div>
 
-    <!-- Application Script Logic -->
+    <!-- Scanner Reader Modal/Overlay -->
+    <div id="reader-container" class="fixed inset-0 bg-black/80 z-50 hidden flex-col items-center justify-center p-4">
+        <div class="bg-white rounded-xl p-4 w-full max-w-sm flex flex-col items-center">
+            <h3 id="scannerTitle" class="text-sm font-bold text-gray-800 mb-3">📷 สแกน QR Code</h3>
+            <div id="reader" class="w-full rounded-lg overflow-hidden"></div>
+            <button onclick="stopScanner()" class="mt-4 w-full bg-gray-200 text-gray-800 py-2 rounded-lg text-xs font-semibold hover:bg-gray-300">ยกเลิก</button>
+        </div>
+    </div>
+
+    <!-- Modal Form Vehicle Details (Checkout) -->
+    <div id="vehicleModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-xl p-5 w-full max-w-sm shadow-xl space-y-4">
+            <h3 class="text-base font-bold text-gray-800">🚚 บันทึกข้อมูลการยืม</h3>
+            <p class="text-xs text-gray-500">ID อุปกรณ์: <span id="modalEqId" class="font-mono font-bold text-gray-800"></span></p>
+            <div>
+                <label class="block text-xs text-gray-600 mb-1">ทะเบียนรถ <span class="text-red-500">*</span></label>
+                <input type="text" id="plateInput" required class="w-full px-3 py-2 border rounded-lg text-sm">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-600 mb-1">ชื่อคนขับ</label>
+                <input type="text" id="driverInput" class="w-full px-3 py-2 border rounded-lg text-sm">
+            </div>
+            <div class="flex space-x-2 pt-2">
+                <button onclick="closeModal('vehicleModal')" class="w-1/2 bg-gray-100 text-gray-700 py-2 rounded-lg text-xs font-semibold">ยกเลิก</button>
+                <button onclick="confirmCheckout()" class="w-1/2 bg-indigo-600 text-white py-2 rounded-lg text-xs font-semibold hover:bg-indigo-700">ยืนยันการยืม</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        let isLoginMode = true;
         let html5QrCode = null;
-        let currentMode = null;
-        let scannedEqId = null;
+        let currentMode = '';
+        let scannedEqId = '';
         let cachedEquipments = [];
         let currentEquipFilter = 'ALL';
 
-        document.addEventListener('DOMContentLoaded', () => {
+        window.onload = function() {
             checkAuth();
-        });
+        };
 
         function checkAuth() {
             const token = localStorage.getItem('token');
             const username = localStorage.getItem('username');
-
             if (token) {
-                document.getElementById('authSection').classList.add('hidden');
-                document.getElementById('appSection').classList.remove('hidden');
-                document.getElementById('sideUser').innerText = `👤 ${username || 'User'}`;
+                document.getElementById('authContainer').classList.add('hidden');
+                document.getElementById('appContainer').classList.remove('hidden');
+                document.getElementById('sideUser').innerText = `👤 ${username}`;
                 loadDashboard();
             } else {
-                document.getElementById('authSection').classList.remove('hidden');
-                document.getElementById('appSection').classList.add('hidden');
+                document.getElementById('authContainer').classList.remove('hidden');
+                document.getElementById('appContainer').classList.add('hidden');
             }
         }
 
-        function toggleAuthMode(mode) {
-            const loginCard = document.getElementById('loginCard');
-            const registerCard = document.getElementById('registerCard');
-            document.getElementById('loginError').classList.add('hidden');
-            document.getElementById('regError').classList.add('hidden');
-
-            if (mode === 'register') {
-                loginCard.classList.add('hidden');
-                registerCard.classList.remove('hidden');
-            } else {
-                registerCard.classList.add('hidden');
-                loginCard.classList.remove('hidden');
-            }
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            document.getElementById('authTitle').innerText = isLoginMode ? 'เข้าสู่ระบบ' : 'สมัครสมาชิก';
+            document.getElementById('authBtn').innerText = isLoginMode ? 'เข้าสู่ระบบ' : 'สมัครสมาชิก';
+            document.getElementById('toggleAuthBtn').innerText = isLoginMode ? 'ยังไม่มีบัญชี? สมัครสมาชิก' : 'มีบัญชีอยู่แล้ว? เข้าสู่ระบบ';
+            document.getElementById('authError').classList.add('hidden');
         }
 
-        function handleLogin(e) {
+        function handleAuth(e) {
             e.preventDefault();
-            const u = document.getElementById('loginUsername').value;
-            const p = document.getElementById('loginPassword').value;
-            const errDiv = document.getElementById('loginError');
+            if (isLoginMode) login();
+            else register();
+        }
 
-            errDiv.classList.add('hidden');
+        function login() {
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            const errDiv = document.getElementById('authError');
 
             fetch('/api/login', {
                 method: 'POST',
@@ -395,12 +318,12 @@
             })
             .then(res => res.json())
             .then(data => {
-                if (data.token) {
+                if (data.success) {
                     localStorage.setItem('token', data.token);
-                    localStorage.setItem('username', u);
+                    localStorage.setItem('username', data.username);
                     checkAuth();
                 } else {
-                    errDiv.innerText = data.message || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง';
+                    errDiv.innerText = data.message;
                     errDiv.classList.remove('hidden');
                 }
             })
@@ -410,37 +333,24 @@
             });
         }
 
-        function handleRegister(e) {
-            e.preventDefault();
-            const u = document.getElementById('regUsername').value;
-            const p = document.getElementById('regPassword').value;
-            const cp = document.getElementById('regConfirmPassword').value;
-            const errDiv = document.getElementById('regError');
-
-            errDiv.classList.add('hidden');
-
-            if (p !== cp) {
-                errDiv.innerText = 'รหัสผ่านทั้งสองช่องไม่ตรงกัน';
-                errDiv.classList.remove('hidden');
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('username', u);
-            formData.append('password', p);
+        // ปรับแก้ส่ง JSON สำเร็จ
+        function register() {
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            const errDiv = document.getElementById('authError');
 
             fetch('/api/register', {
                 method: 'POST',
-                body: formData
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ username: u, password: p })
             })
             .then(res => res.json())
             .then(data => {
+                alert(data.message);
                 if (data.success) {
-                    alert('สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ');
-                    toggleAuthMode('login');
-                    document.getElementById('loginUsername').value = u;
+                    toggleAuthMode();
                 } else {
-                    errDiv.innerText = data.message || 'ไม่สามารถลงทะเบียนได้';
+                    errDiv.innerText = data.message;
                     errDiv.classList.remove('hidden');
                 }
             })

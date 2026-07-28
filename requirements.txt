@@ -1,4 +1,6 @@
 Flask
-gunicorn
+Flask-Cors
+PyJWT
 qrcode
 Pillow
+werkzeug

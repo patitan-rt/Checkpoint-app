@@ -58,14 +58,12 @@
         .badge-avail { background: #064e3b; color: #34d399; }
         .badge-borrowed { background: #7f1d1d; color: #fca5a5; }
 
-        /* QR Code Tag Box */
         .qrcode-box { background: white; padding: 10px; border-radius: 8px; margin-top: 10px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .qrcode-img { width: 140px; height: 140px; display: block; margin: 0 auto; }
         .qrcode-text { color: black; font-weight: bold; font-family: monospace; font-size: 15px; margin-top: 4px; }
 
         .filter-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
         
-        /* Table Style for Logs */
         .table-responsive { width: 100%; overflow-x: auto; border: 1px solid var(--border-color); border-radius: 8px; background: #030712; }
         .log-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; white-space: nowrap; }
         .log-table th { background: #1f2937; color: var(--accent-color); padding: 10px 12px; font-weight: 600; border-bottom: 1px solid var(--border-color); }
@@ -126,27 +124,26 @@
 
     <div id="appView" style="display: none;">
         
-        <!-- Scanner Area Global -->
         <div id="reader-container">
             <div id="reader"></div>
             <button class="btn btn-danger" onclick="stopScanner()" style="margin-top: 8px;">❌ ปิดกล้องสแกน</button>
         </div>
 
-        <!-- Tab 1: สินค้าที่ถูกยืมอยู่ -->
+        <!-- Tab 1: สินค้าถูกยืม -->
         <div id="tab-borrowed" class="tab-content active" style="max-width: 480px; margin: 0 auto;">
             <button class="btn btn-checkin" onclick="startScan('CHECKIN')">📷 สแกน QR Code คืนอุปกรณ์ (Checkin)</button>
             <h3 style="font-size: 14px; text-align: left; margin: 20px 0 10px; color: #fca5a5;">รายการอุปกรณ์ที่กำลังถูกยืม</h3>
             <div id="borrowedEquipmentList">กำลังโหลด...</div>
         </div>
 
-        <!-- Tab 2: สินค้าที่มีสถานะว่างอยู่ -->
+        <!-- Tab 2: สินค้าว่าง -->
         <div id="tab-available" class="tab-content" style="max-width: 480px; margin: 0 auto;">
             <button class="btn btn-checkout" onclick="startScan('CHECKOUT')">📷 สแกน QR Code ยืมอุปกรณ์ (Checkout)</button>
             <h3 style="font-size: 14px; text-align: left; margin: 20px 0 10px; color: #34d399;">รายการอุปกรณ์พร้อมใช้งาน (ว่าง)</h3>
             <div id="availableEquipmentList">กำลังโหลด...</div>
         </div>
 
-        <!-- Tab 3 (ใหม่): เพิ่มสินค้าแยกต่างหาก -->
+        <!-- Tab 3: เพิ่มสินค้า -->
         <div id="tab-add-eq" class="tab-content" style="max-width: 480px; margin: 0 auto;">
             <div style="background: var(--card-bg); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); text-align: left;">
                 <h3 style="color: var(--accent-color); margin-bottom: 15px;">➕ เพิ่มสินค้าใหม่ (เจน QR Code)</h3>
@@ -166,7 +163,7 @@
             </div>
         </div>
 
-        <!-- Tab 4: Logs การยืม-คืน อุปกรณ์ (ตาราง) -->
+        <!-- Tab 4: Logs ยืม-คืน (ตาราง) -->
         <div id="tab-logs-trans" class="tab-content">
             <div class="filter-grid" style="max-width:480px; margin: 0 auto 12px;">
                 <div>
@@ -217,7 +214,7 @@
             </div>
         </div>
 
-        <!-- Tab 5: Logs ผู้ใช้งาน / Operator (ตาราง) -->
+        <!-- Tab 5: Logs Operator -->
         <div id="tab-logs-op" class="tab-content">
             <div class="filter-grid" style="max-width:480px; margin: 0 auto 12px;">
                 <div>
@@ -265,7 +262,7 @@
             </div>
         </div>
 
-        <!-- Tab 6: เปลี่ยน Profile/Password -->
+        <!-- Tab 6: Profile & Password -->
         <div id="tab-profile" class="tab-content" style="max-width: 480px; margin: 0 auto;">
             <div style="background: var(--card-bg); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 20px; text-align: left;">
                 <h3 style="color: var(--accent-color); margin-bottom: 15px;">👤 เปลี่ยน Username</h3>
@@ -344,7 +341,7 @@
     </div>
 </div>
 
-<!-- Modal ยืมอุปกรณ์ -->
+<!-- Modal Checkout Vehicle -->
 <div id="vehicleModal" class="modal">
     <div class="modal-content">
         <h3>บันทึกการยืมอุปกรณ์</h3>
@@ -534,14 +531,12 @@
         }
     }
 
-    // --- ระบบสแกน QR Code ---
     async function startScan(mode) {
         currentMode = mode;
         await stopScanner();
 
         document.getElementById('reader-container').style.display = 'block';
         html5QrCode = new Html5Qrcode("reader");
-
         const config = { fps: 10, qrbox: { width: 220, height: 220 } };
 
         try {
@@ -557,11 +552,10 @@
                 await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
             }
         } catch (err) {
-            console.warn("Camera ID detection failed, falling back to facingMode:", err);
             try {
                 await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
             } catch (fallbackErr) {
-                alert("ไม่สามารถเปิดกล้องได้ กรุณาตรวจสอบการอนุญาตใช้งานกล้องบนเบราว์เซอร์");
+                alert("ไม่สามารถเปิดกล้องได้ กรุณาตรวจสอบการอนุญาตกล้อง");
                 stopScanner();
             }
         }
@@ -569,11 +563,7 @@
 
     async function stopScanner() {
         if (html5QrCode) {
-            try {
-                await html5QrCode.stop();
-            } catch (e) {
-                console.log("Scanner stop state:", e);
-            }
+            try { await html5QrCode.stop(); } catch (e) {}
             html5QrCode = null;
         }
         const container = document.getElementById('reader-container');
@@ -592,10 +582,12 @@
                 return;
             }
             document.getElementById('modalEqId').innerText = scannedEqId;
+            document.getElementById('plateInput').value = '';
+            document.getElementById('driverInput').value = '';
             document.getElementById('vehicleModal').style.display = 'flex';
         } else if (currentMode === "CHECKIN") {
             if (targetEq && targetEq.status === "AVAILABLE") {
-                alert("อุปกรณ์นี้ไม่ได้อยู่ในระบบการยืมสินค้า");
+                alert("อุปกรณ์นี้ไม่ได้อยู่ในสถานะถูกยืม");
                 return;
             }
 
@@ -721,10 +713,13 @@
     // ฟังก์ชันช่วยสกัดรายละเอียดจาก Log string
     function parseLogDetails(detailsStr) {
         let plate = "-", driver = "-";
+        if (!detailsStr) return { plate, driver };
+        
         const plateMatch = detailsStr.match(/Plate:\s*([^,]+)/i);
         const driverMatch = detailsStr.match(/Driver:\s*([^,]+)/i);
-        if (plateMatch) plate = plateMatch[1].trim();
-        if (driverMatch) driver = driverMatch[1].trim();
+        
+        if (plateMatch && plateMatch[1]) plate = plateMatch[1].trim();
+        if (driverMatch && driverMatch[1]) driver = driverMatch[1].trim();
         return { plate, driver };
     }
 
@@ -744,7 +739,6 @@
         
         cachedEquipments = data.equipments || [];
 
-        // Map ค้นหาชื่อสินค้าจาก eq_id
         const eqMap = {};
         cachedEquipments.forEach(e => { eqMap[e.id] = e.name; });
 
@@ -775,62 +769,71 @@
                 <button class="btn btn-secondary" onclick="printQrTag('${e.id}', '${e.name}', '${e.qrcode}')" style="margin-top:8px; padding:6px; font-size:12px;">🖨️ พิมพ์ Tag QR Code</button>
             </div>`;
 
-            if (isAvail) {
-                availableHtml += cardHtml;
-            } else {
-                borrowedHtml += cardHtml;
-            }
+            if (isAvail) availableHtml += cardHtml;
+            else borrowedHtml += cardHtml;
         });
 
         document.getElementById('borrowedEquipmentList').innerHTML = borrowedHtml || "<small style='color:#6b7280;'>ไม่มีอุปกรณ์ที่ถูกยืมในขณะนี้</small>";
         document.getElementById('availableEquipmentList').innerHTML = availableHtml || "<small style='color:#6b7280;'>ไม่มีอุปกรณ์ว่างในระบบ</small>";
 
         // --- Render ตาราง Transaction Logs ---
-        const allLogs = data.logs || [];
-        let transRowsHtml = "";
-        let opRowsHtml = "";
+        const rawLogs = data.logs || [];
+        
+        // แยก Logs ตามประเภท
+        const checkoutLogs = [];
+        const checkinLogs = [];
+        const opLogs = [];
 
-        allLogs.forEach(l => {
-            const detailText = l.details || "";
-            const isCheckout = detailText.includes("Checkout") || detailText.includes("ยืม");
-            const isCheckin = detailText.includes("Checkin") || detailText.includes("คืน");
-
-            if (isCheckout || isCheckin) {
-                const prodName = eqMap[l.eq_id] || "ไม่ระบุ";
-                const parsed = parseLogDetails(detailText);
-
-                let borrowTime = "-";
-                let returnTime = "-";
-
-                if (isCheckout) {
-                    borrowTime = l.timestamp;
-                    returnTime = `<span style="color:var(--danger-color); font-weight:bold;">&lt;ยังไม่คืน&gt;</span>`;
-                } else if (isCheckin) {
-                    returnTime = l.timestamp;
-                }
-
-                transRowsHtml += `
-                    <tr>
-                        <td><b>${l.username}</b></td>
-                        <td>${borrowTime}</td>
-                        <td>${returnTime}</td>
-                        <td>${prodName}</td>
-                        <td>${parsed.plate}</td>
-                        <td>${parsed.driver}</td>
-                        <td><code style="color:var(--accent-color);">${l.eq_id}</code></td>
-                    </tr>
-                `;
+        rawLogs.forEach(l => {
+            const act = l.action || "";
+            const dt = l.details || "";
+            if (act === "CHECKOUT" || dt.includes("Checkout") || dt.includes("ยืม")) {
+                checkoutLogs.push(l);
+            } else if (act === "CHECKIN" || dt.includes("Checkin") || dt.includes("คืน")) {
+                checkinLogs.push(l);
             } else {
-                // Log ฝั่ง Operator
-                opRowsHtml += `
-                    <tr>
-                        <td>${l.timestamp}</td>
-                        <td><b>${l.username}</b></td>
-                        <td><span style="color:var(--purple-color); font-weight:bold;">${l.details.split(' ')[0] || 'SYSTEM'}</span></td>
-                        <td>${l.details} (รหัส: ${l.eq_id || '-'})</td>
-                    </tr>
-                `;
+                opLogs.push(l);
             }
+        });
+
+        // แมป Checkout กับ Checkin เข้าตาราง
+        let transRowsHtml = "";
+        
+        checkoutLogs.forEach(co => {
+            const parsed = parseLogDetails(co.details);
+            const prodName = eqMap[co.eq_id] || "ไม่ระบุ";
+            
+            // หา Log การคืนที่เกิดขึ้นหลังจาก ยืม อุปกรณ์ตัวนี้
+            const matchIn = checkinLogs.find(ci => ci.eq_id === co.eq_id && new Date(ci.timestamp) >= new Date(co.timestamp));
+            
+            const returnTimeStr = matchIn 
+                ? matchIn.timestamp 
+                : `<span style="color:var(--danger-color); font-weight:bold;">&lt;ยังไม่คืน&gt;</span>`;
+
+            transRowsHtml += `
+                <tr>
+                    <td><b>${co.username}</b></td>
+                    <td>${co.timestamp}</td>
+                    <td>${returnTimeStr}</td>
+                    <td>${prodName}</td>
+                    <td><b style="color:var(--accent-color);">${parsed.plate}</b></td>
+                    <td>${parsed.driver}</td>
+                    <td><code>${co.eq_id}</code></td>
+                </tr>
+            `;
+        });
+
+        // Render ตาราง Operator Logs
+        let opRowsHtml = "";
+        opLogs.forEach(l => {
+            opRowsHtml += `
+                <tr>
+                    <td>${l.timestamp}</td>
+                    <td><b>${l.username}</b></td>
+                    <td><span style="color:var(--purple-color); font-weight:bold;">${l.action || 'SYSTEM'}</span></td>
+                    <td>${l.details} (รหัส: ${l.eq_id || '-'})</td>
+                </tr>
+            `;
         });
 
         document.getElementById('transLogTableBody').innerHTML = transRowsHtml || `<tr><td colspan="7" style="text-align:center; color:#6b7280;">ไม่พบประวัติการยืม-คืน</td></tr>`;

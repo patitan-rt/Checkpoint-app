@@ -6,3 +6,7 @@ pyjwt
 python-multipart
 sqlalchemy
 psycopg2-binary
+Flask
+gunicorn
+qrcode
+Pillow

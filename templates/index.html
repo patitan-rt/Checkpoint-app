@@ -9,25 +9,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Prompt', sans-serif; }
-        
-        /* สไตล์สำหรับซ่อนส่วนที่ไม่เกี่ยวข้องเวลาสั่งพิมพ์ (Print CSS) */
         @media print {
-            body * {
-                visibility: hidden;
-            }
-            #printSection, #printSection * {
-                visibility: visible;
-            }
+            body * { visibility: hidden; }
+            #printSection, #printSection * { visibility: visible; }
             #printSection {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                display: flex !important;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                padding: 20px;
+                position: absolute; left: 0; top: 0; width: 100%;
+                display: flex !important; flex-direction: column;
+                align-items: center; justify-content: center; padding: 20px;
             }
         }
     </style>
@@ -52,16 +40,13 @@
                     <label class="block text-xs font-semibold text-gray-700 mb-1">รหัสผ่าน (Password)</label>
                     <input type="password" id="password" required class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
                 </div>
-
                 <div id="authError" class="hidden bg-red-50 border border-red-200 text-red-500 text-xs py-2.5 px-3 rounded-xl text-center font-medium">
                     Username หรือ Password ไม่ถูกต้อง
                 </div>
-
                 <button type="submit" id="authBtn" class="w-full bg-indigo-600 text-white py-3 rounded-xl text-sm font-semibold hover:bg-indigo-700 transition shadow-md">
                     เข้าสู่ระบบ
                 </button>
             </form>
-
             <div class="mt-6 text-center pt-4 border-t border-gray-100 w-full">
                 <p class="text-xs text-gray-500">
                     ยังไม่มีบัญชีใช้งาน? 
@@ -120,7 +105,30 @@
                 </div>
             </div>
 
-            <!-- Tab 3: เพิ่มสินค้า -->
+            <!-- Tab 3: ประวัติยืม-คืน (Logs) -->
+            <div id="logsView" class="tab-content hidden space-y-4">
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                    <h2 class="font-bold text-base text-gray-800 mb-4 flex items-center gap-2">
+                        <span>📜</span> ประวัติการยืม-คืนสินค้า (Transaction Logs)
+                    </h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-gray-600 border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 border-b border-gray-200 text-gray-700 font-semibold">
+                                    <th class="p-2.5">ชื่อสินค้า / Tag ID</th>
+                                    <th class="p-2.5">เวลายืม</th>
+                                    <th class="p-2.5">เวลาคืน</th>
+                                    <th class="p-2.5">ทะเบียน / คนขับ</th>
+                                    <th class="p-2.5">ผู้ยืม</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logsTableBody" class="divide-y divide-gray-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 4: เพิ่มสินค้า -->
             <div id="addProductView" class="tab-content hidden space-y-4">
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 max-w-md mx-auto">
                     <h2 class="font-bold text-base text-gray-800 mb-4 flex items-center gap-2">
@@ -146,7 +154,7 @@
                 </div>
             </div>
 
-            <!-- Tab 4: แท็บตั้งค่า -->
+            <!-- Tab 5: ตั้งค่า -->
             <div id="settingsView" class="tab-content hidden space-y-4">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
                     <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 space-y-4">
@@ -201,6 +209,10 @@
                 <span class="text-xl">📥</span>
                 <span class="text-[10px] font-semibold mt-0.5">สินค้าถูกยืม</span>
             </button>
+            <button id="nav-logsView" onclick="switchTab('logsView')" class="nav-btn flex flex-col items-center text-gray-400">
+                <span class="text-xl">📜</span>
+                <span class="text-[10px] font-semibold mt-0.5">ประวัติ (Log)</span>
+            </button>
             <button id="nav-addProductView" onclick="switchTab('addProductView')" class="nav-btn flex flex-col items-center text-gray-400">
                 <span class="text-xl">➕</span>
                 <span class="text-[10px] font-semibold mt-0.5">เพิ่มสินค้า</span>
@@ -243,18 +255,15 @@
         </div>
     </div>
 
-    <!-- Modal พิมพ์ QR Code (สำหรับสั่งพิมพ์ฉลาก) -->
+    <!-- Modal พิมพ์ QR Code -->
     <div id="printModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
         <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl space-y-4 text-center">
             <h3 class="text-base font-bold text-gray-800 border-b pb-2">🖨️ พิมพ์ QR Code ฉลากสินค้า</h3>
-            
-            <!-- ส่วนที่จะถูกดึงไปพิมพ์ฉลาก -->
             <div id="printSection" class="flex flex-col items-center justify-center p-4 border rounded-xl bg-slate-50">
                 <img id="printQrImg" src="" class="w-48 h-48 border p-2 bg-white rounded-lg mb-2" />
                 <div id="printEqName" class="font-bold text-sm text-gray-800"></div>
                 <div id="printEqId" class="text-xs font-mono text-gray-500"></div>
             </div>
-
             <div class="flex space-x-2 pt-2">
                 <button onclick="closeModal('printModal')" class="w-1/2 bg-gray-100 text-gray-700 py-2.5 rounded-xl text-xs font-semibold hover:bg-gray-200">ปิด</button>
                 <button onclick="window.print()" class="w-1/2 bg-indigo-600 text-white py-2.5 rounded-xl text-xs font-semibold hover:bg-indigo-700 transition flex items-center justify-center gap-1">
@@ -271,9 +280,7 @@
         let scannedEqId = '';
         let globalEquipments = [];
 
-        window.onload = function() {
-            checkAuth();
-        };
+        window.onload = function() { checkAuth(); };
 
         function checkAuth() {
             const token = localStorage.getItem('token');
@@ -327,10 +334,6 @@
                     errDiv.innerText = data.message || 'Username หรือ Password ไม่ถูกต้อง';
                     errDiv.classList.remove('hidden');
                 }
-            })
-            .catch(() => {
-                errDiv.innerText = 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์';
-                errDiv.classList.remove('hidden');
             });
         }
 
@@ -348,10 +351,6 @@
             .then(data => {
                 alert(data.message);
                 if (data.success) toggleAuthMode();
-                else {
-                    errDiv.innerText = data.message;
-                    errDiv.classList.remove('hidden');
-                }
             });
         }
 
@@ -393,10 +392,7 @@
             document.getElementById('scannerTitle').innerText = mode === 'CHECKOUT' ? '📷 สแกน QR เพื่อยืมสินค้า' : '📷 สแกน QR เพื่อคืนสินค้า';
             document.getElementById('reader-container').style.display = 'flex';
 
-            if (!html5QrCode) {
-                html5QrCode = new Html5Qrcode("reader");
-            }
-
+            if (!html5QrCode) { html5QrCode = new Html5Qrcode("reader"); }
             const config = { fps: 10, qrbox: { width: 220, height: 220 } };
             html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
                 .catch(() => alert("ไม่สามารถเปิดกล้องได้ โปรดตรวจสอบสิทธิ์ใช้งานกล้อง"));
@@ -493,11 +489,7 @@
                     document.getElementById('addEqPin').value = '';
                     document.getElementById('addEqId').value = '';
                     document.getElementById('addEqName').value = '';
-                    
-                    // โหลดข้อมูลใหม่ และเปิดหน้าพิมพ์ QR Code สินค้าชิ้นนั้นทันที
-                    loadDashboard().then(() => {
-                        openPrintModal(eqId);
-                    });
+                    loadDashboard().then(() => { openPrintModal(eqId); });
                 }
             });
         }
@@ -565,6 +557,7 @@
             .then(data => {
                 globalEquipments = data.equipments || [];
                 renderEquipmentLists(globalEquipments);
+                renderLogs(data.logs || []);
             });
         }
 
@@ -575,7 +568,6 @@
             const available = equipments.filter(e => e.status === 'AVAILABLE');
             const borrowed = equipments.filter(e => e.status === 'BORROWED');
 
-            // แสดงรายการสินค้าพร้อมยืม (เอาปุ่มยืมออก ให้เหลือเฉพาะสแกน และปุ่มพิมพ์ QR)
             availableContainer.innerHTML = available.length === 0 ? 
                 '<p class="text-xs text-gray-400 text-center col-span-2 py-8">ไม่มีสินค้าว่างพร้อมยืม</p>' : 
                 available.map(e => `
@@ -593,7 +585,6 @@
                     </div>
                 `).join('');
 
-            // แสดงรายการสินค้าที่ถูกยืม (เอาปุ่มคืนออก)
             borrowedContainer.innerHTML = borrowed.length === 0 ? 
                 '<p class="text-xs text-gray-400 text-center col-span-2 py-8">ไม่มีสินค้าที่กำลังถูกยืม</p>' : 
                 borrowed.map(e => `
@@ -613,6 +604,32 @@
                         </div>
                     </div>
                 `).join('');
+        }
+
+        function renderLogs(logs) {
+            const tbody = document.getElementById('logsTableBody');
+            if (logs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-gray-400">ยังไม่มีประวัติการยืม-คืน</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = logs.map(l => `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="p-2.5">
+                        <div class="font-bold text-gray-800">${l.eq_name}</div>
+                        <div class="text-[10px] font-mono text-gray-400">${l.eq_id}</div>
+                    </td>
+                    <td class="p-2.5 font-mono text-indigo-600">${l.borrowed_at || '-'}</td>
+                    <td class="p-2.5 font-mono">
+                        ${l.returned_at ? `<span class="text-emerald-600">${l.returned_at}</span>` : '<span class="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded-full font-sans font-semibold">กำลังยืมอยู่</span>'}
+                    </td>
+                    <td class="p-2.5">
+                        <div class="font-medium text-gray-700">${l.plate_number || '-'}</div>
+                        <div class="text-[10px] text-gray-400">${l.driver_name || '-'}</div>
+                    </td>
+                    <td class="p-2.5 font-medium text-gray-700">${l.borrowed_by || '-'}</td>
+                </tr>
+            `).join('');
         }
     </script>
 </body>

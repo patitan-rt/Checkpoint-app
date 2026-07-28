@@ -1,5 +1,4 @@
 import os
-import sqlite3
 import base64
 from datetime import datetime, timedelta
 from typing import Optional
@@ -9,6 +8,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 import jwt
+
+# --- SQLAlchemy Imports ---
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, func
+from sqlalchemy.orm import sessionmaker, declarative_base
 
 app = FastAPI(title="Checkpoint PWA System")
 
@@ -20,83 +23,107 @@ templates = Jinja2Templates(directory="templates")
 
 SECRET_KEY = "SUPER_SECRET_CHECKPOINT_KEY_CHANGE_ME"
 ALGORITHM = "HS256"
-DB_NAME = "checkpoint.db"
 
-# --- Simple QR Code Matrix Generator (Pure SVG) ---
-def generate_qrcode_svg(text: str) -> str:
-    """สร้าง QR Code SVG พร้อมตัวเลข/รหัสกำกับด้านล่างแบบคร่าวๆ ไม่ต้องลง lib เพิ่ม"""
-    # ใช้ Google Chart API เป็น fallback หรือ SVG Data URI Generator แบบเร็ว
-    # เพื่อความคมชัดและความชัวร์สูงสุดใน PWA แนะนำโครงสร้าง SVG Data URI
-    encoded_text = base64.b64encode(text.encode('utf-8')).decode('utf-8')
-    
-    # สร้าง SVG ที่ดึง QR จาก Standard Data หรือ Render QR Matrix
-    # ในกรณีนี้สร้างเป็น SVG HTML Image Embed เพื่อความสอดคล้อง
-    qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={text}"
-    return qr_url
+# --- Supabase PostgreSQL Connection ---
+# ดึงค่าจาก Environment Variable บน Render (หากมี) หรือ fallback ใช้ Connection String โดยตรง
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql://postgres.wcngqpcicnxvfakinkku:tRPeILhiSbFWmIff@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
+)
 
+# สร้าง SQLAlchemy Engine และ Session
+engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+# --- Database Models (PostgreSQL Table Models) ---
+class User(Base):
+    __tablename__ = "users"
+    username = Column(String, primary_key=True, index=True)
+    password = Column(String, nullable=False)
+    name = Column(String, nullable=False)
+
+class Equipment(Base):
+    __tablename__ = "equipments"
+    id = Column(String, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    status = Column(String, nullable=False)
+    image = Column(Text, nullable=True, default="")
+
+class Log(Base):
+    __tablename__ = "logs"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    timestamp = Column(String)
+    eq_id = Column(String)
+    action = Column(String)
+    details = Column(Text)
+    username = Column(String)
+
+class Setting(Base):
+    __tablename__ = "settings"
+    key = Column(String, primary_key=True)
+    value = Column(String, nullable=False)
+
+# สร้างตารางบน Supabase อัตโนมัติ (หากยังไม่มี) และลงข้อมูลเริ่มต้น
 def init_db():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            username TEXT PRIMARY KEY,
-            password TEXT NOT NULL,
-            name TEXT NOT NULL
-        )
-    ''')
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS equipments (
-            id TEXT PRIMARY KEY,
-            name TEXT NOT NULL,
-            status TEXT NOT NULL,
-            image TEXT
-        )
-    ''')
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp TEXT,
-            eq_id TEXT,
-            action TEXT,
-            details TEXT,
-            username TEXT
-        )
-    ''')
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS settings (
-            key TEXT PRIMARY KEY,
-            value TEXT NOT NULL
-        )
-    ''')
-    
-    cursor.execute("INSERT OR IGNORE INTO settings VALUES ('admin_pin', '9999')")
-    cursor.execute("INSERT OR IGNORE INTO users VALUES ('admin', '1234', 'Admin User')")
-    cursor.execute("INSERT OR IGNORE INTO equipments VALUES ('EQ-101', 'ตู้เชื่อม Portable', 'AVAILABLE', '')")
-    cursor.execute("INSERT OR IGNORE INTO equipments VALUES ('EQ-102', 'สว่านไร้สาย', 'AVAILABLE', '')")
+    Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+    try:
+        # Check and insert default settings
+        if not db.query(Setting).filter(Setting.key == "admin_pin").first():
+            db.add(Setting(key="admin_pin", value="9999"))
+        
+        # Check and insert default users
+        if not db.query(User).filter(User.username == "admin").first():
+            db.add(User(username="admin", password="1234", name="Admin User"))
+            
+        # Check and insert default equipments
+        if not db.query(Equipment).filter(Equipment.id == "EQ-101").first():
+            db.add(Equipment(id="EQ-101", name="ตู้เชื่อม Portable", status="AVAILABLE", image=""))
+        if not db.query(Equipment).filter(Equipment.id == "EQ-102").first():
+            db.add(Equipment(id="EQ-102", name="สว่านไร้สาย", status="AVAILABLE", image=""))
+            
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"Error initializing DB: {e}")
+    finally:
+        db.close()
 
-    conn.commit()
-    conn.close()
+# เรียกใช้งาน init_db() ตอนเริ่มระบบ
+init_db()
 
-# --- Helpers ---
+# --- Helper Functions ---
+def generate_qrcode_svg(text: str) -> str:
+    """สร้าง QR Code URL สำหรับแสดงผล"""
+    return f"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={text}"
+
 def get_admin_pin():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("SELECT value FROM settings WHERE key = 'admin_pin'")
-    row = cursor.fetchone()
-    conn.close()
-    return row[0] if row else "9999"
+    db = SessionLocal()
+    try:
+        setting = db.query(Setting).filter(Setting.key == "admin_pin").first()
+        return setting.value if setting else "9999"
+    finally:
+        db.close()
 
 def add_db_log(eq_id: str, action: str, details: str, username: str = "system"):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    cursor.execute(
-        "INSERT INTO logs (timestamp, eq_id, action, details, username) VALUES (?, ?, ?, ?, ?)",
-        (now_str, eq_id, action, details, username)
-    )
-    conn.commit()
-    conn.close()
+    db = SessionLocal()
+    try:
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        log_entry = Log(
+            timestamp=now_str,
+            eq_id=eq_id,
+            action=action,
+            details=details,
+            username=username
+        )
+        db.add(log_entry)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"Error adding log: {e}")
+    finally:
+        db.close()
 
 def create_access_token(data: dict):
     to_encode = data.copy()
@@ -141,17 +168,16 @@ class LoginModel(BaseModel):
 
 @app.post("/api/login")
 async def login(data: LoginModel):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("SELECT username, name FROM users WHERE username = ? AND password = ?", (data.username, data.password))
-    user = cursor.fetchone()
-    conn.close()
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.username == data.username, User.password == data.password).first()
+        if not user:
+            return {"success": False, "message": "Username หรือ Password ไม่ถูกต้อง"}
 
-    if not user:
-        return {"success": False, "message": "Username หรือ Password ไม่ถูกต้อง"}
-
-    token = create_access_token({"sub": user[0], "name": user[1]})
-    return {"success": True, "token": token, "username": user[0], "name": user[1]}
+        token = create_access_token({"sub": user.username, "name": user.name})
+        return {"success": True, "token": token, "username": user.username, "name": user.name}
+    finally:
+        db.close()
 
 class RegisterModel(BaseModel):
     username: str
@@ -160,17 +186,23 @@ class RegisterModel(BaseModel):
 
 @app.post("/api/register")
 async def register_user(data: RegisterModel):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
+    db = SessionLocal()
     try:
-        cursor.execute("INSERT INTO users VALUES (?, ?, ?)", (data.username, data.password, data.name))
-        conn.commit()
-        conn.close()
+        existing_user = db.query(User).filter(User.username == data.username).first()
+        if existing_user:
+            return {"success": False, "message": "Username นี้มีในระบบอยู่แล้ว"}
+
+        new_user = User(username=data.username, password=data.password, name=data.name)
+        db.add(new_user)
+        db.commit()
+        
         add_db_log("USER", "REGISTER", f"ลงทะเบียนผู้ใช้งานใหม่: {data.name}", data.username)
         return {"success": True, "message": "สมัครสมาชิกสำเร็จ!"}
-    except Exception:
-        conn.close()
-        return {"success": False, "message": "Username นี้มีในระบบอยู่แล้ว"}
+    except Exception as e:
+        db.rollback()
+        return {"success": False, "message": "เกิดข้อผิดพลาดในการลงทะเบียน"}
+    finally:
+        db.close()
 
 class ChangeUsernameModel(BaseModel):
     token: str
@@ -183,26 +215,27 @@ async def change_username(data: ChangeUsernameModel):
     if not current_user:
         return {"success": False, "message": "Session หมดอายุ กรุณาล็อกอินใหม่"}
 
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("SELECT password FROM users WHERE username = ?", (current_user,))
-    row = cursor.fetchone()
-
-    if not row or row[0] != data.password_confirm:
-        conn.close()
-        return {"success": False, "message": "รหัสผ่านยืนยันไม่ถูกต้อง!"}
-
+    db = SessionLocal()
     try:
-        cursor.execute("UPDATE users SET username = ? WHERE username = ?", (data.new_username, current_user))
-        conn.commit()
-        conn.close()
-        
+        user = db.query(User).filter(User.username == current_user).first()
+        if not user or user.password != data.password_confirm:
+            return {"success": False, "message": "รหัสผ่านยืนยันไม่ถูกต้อง!"}
+
+        check_dup = db.query(User).filter(User.username == data.new_username).first()
+        if check_dup:
+            return {"success": False, "message": "Username ใหม่นี้ซ้ำกับในระบบ"}
+
+        user.username = data.new_username
+        db.commit()
+
         add_db_log("USER", "CHANGE_USERNAME", f"เปลี่ยนชื่อผู้ใช้จาก '{current_user}' เป็น '{data.new_username}'", data.new_username)
-        new_token = create_access_token({"sub": data.new_username, "name": data.new_username})
+        new_token = create_access_token({"sub": data.new_username, "name": user.name})
         return {"success": True, "message": "เปลี่ยน Username สำเร็จ!", "new_token": new_token, "new_username": data.new_username}
     except Exception:
-        conn.close()
-        return {"success": False, "message": "Username ใหม่นี้ซ้ำกับในระบบ"}
+        db.rollback()
+        return {"success": False, "message": "ไม่สามารถเปลี่ยน Username ได้"}
+    finally:
+        db.close()
 
 class ChangePasswordModel(BaseModel):
     token: str
@@ -215,21 +248,22 @@ async def change_password(data: ChangePasswordModel):
     if not current_user:
         return {"success": False, "message": "Session หมดอายุ กรุณาล็อกอินใหม่"}
 
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("SELECT password FROM users WHERE username = ?", (current_user,))
-    row = cursor.fetchone()
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.username == current_user).first()
+        if not user or user.password != data.old_password:
+            return {"success": False, "message": "รหัสผ่านเดิมไม่ถูกต้อง!"}
 
-    if not row or row[0] != data.old_password:
-        conn.close()
-        return {"success": False, "message": "รหัสผ่านเดิมไม่ถูกต้อง!"}
+        user.password = data.new_password
+        db.commit()
 
-    cursor.execute("UPDATE users SET password = ? WHERE username = ?", (data.new_password, current_user))
-    conn.commit()
-    conn.close()
-
-    add_db_log("USER", "CHANGE_PASSWORD", "เปลี่ยนรหัสผ่านเข้าใช้งานสำเร็จ", current_user)
-    return {"success": True, "message": "เปลี่ยนรหัสผ่านสำเร็จ!"}
+        add_db_log("USER", "CHANGE_PASSWORD", "เปลี่ยนรหัสผ่านเข้าใช้งานสำเร็จ", current_user)
+        return {"success": True, "message": "เปลี่ยนรหัสผ่านสำเร็จ!"}
+    except Exception:
+        db.rollback()
+        return {"success": False, "message": "ไม่สามารถเปลี่ยนรหัสผ่านได้"}
+    finally:
+        db.close()
 
 # --- APIs Equipment & Logs ---
 class CheckoutModel(BaseModel):
@@ -243,23 +277,24 @@ async def checkout(req: CheckoutModel):
     username = verify_token(req.token)
     if not username: return {"success": False, "message": "Session หมดอายุ"}
 
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("SELECT status FROM equipments WHERE id = ?", (req.eq_id,))
-    eq = cursor.fetchone()
-    if not eq:
-        conn.close()
-        return {"success": False, "message": "ไม่พบอุปกรณ์นี้"}
-    if eq[0] == "BORROWED":
-        conn.close()
-        return {"success": False, "message": "อุปกรณ์นี้ถูกยืมไปแล้ว"}
+    db = SessionLocal()
+    try:
+        eq = db.query(Equipment).filter(Equipment.id == req.eq_id).first()
+        if not eq:
+            return {"success": False, "message": "ไม่พบอุปกรณ์นี้"}
+        if eq.status == "BORROWED":
+            return {"success": False, "message": "อุปกรณ์นี้ถูกยืมไปแล้ว"}
 
-    cursor.execute("UPDATE equipments SET status = 'BORROWED' WHERE id = ?", (req.eq_id,))
-    conn.commit()
-    conn.close()
+        eq.status = "BORROWED"
+        db.commit()
 
-    add_db_log(req.eq_id, "CHECKOUT", f"ยืมใส่รถทะเบียน: {req.plate_number} (คนขับ: {req.driver_name or 'ไม่ระบุ'})", username)
-    return {"success": True, "message": f"ยืมอุปกรณ์ {req.eq_id} สำเร็จ"}
+        add_db_log(req.eq_id, "CHECKOUT", f"ยืมใส่รถทะเบียน: {req.plate_number} (คนขับ: {req.driver_name or 'ไม่ระบุ'})", username)
+        return {"success": True, "message": f"ยืมอุปกรณ์ {req.eq_id} สำเร็จ"}
+    except Exception:
+        db.rollback()
+        return {"success": False, "message": "เกิดข้อผิดพลาดในการยืมอุปกรณ์"}
+    finally:
+        db.close()
 
 class CheckinModel(BaseModel):
     token: str
@@ -270,58 +305,58 @@ async def checkin(req: CheckinModel):
     username = verify_token(req.token)
     if not username: return {"success": False, "message": "Session หมดอายุ"}
 
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("UPDATE equipments SET status = 'AVAILABLE' WHERE id = ?", (req.eq_id,))
-    conn.commit()
-    conn.close()
+    db = SessionLocal()
+    try:
+        eq = db.query(Equipment).filter(Equipment.id == req.eq_id).first()
+        if eq:
+            eq.status = "AVAILABLE"
+            db.commit()
 
-    add_db_log(req.eq_id, "CHECKIN", "คืนอุปกรณ์เรียบร้อย", username)
-    return {"success": True, "message": f"คืนอุปกรณ์ {req.eq_id} เรียบร้อย"}
+        add_db_log(req.eq_id, "CHECKIN", "คืนอุปกรณ์เรียบร้อย", username)
+        return {"success": True, "message": f"คืนอุปกรณ์ {req.eq_id} เรียบร้อย"}
+    except Exception:
+        db.rollback()
+        return {"success": False, "message": "เกิดข้อผิดพลาดในการคืนอุปกรณ์"}
+    finally:
+        db.close()
 
-# API ดึง Dashboard + เจน QR Code ให้ทุกไอเทม
+# API ดึง Dashboard + เจน QR Code
 @app.get("/api/dashboard_data")
 async def get_dashboard_data(year: Optional[str] = None, month: Optional[str] = None, day: Optional[str] = None):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, name, status, image FROM equipments")
-    eqs = cursor.fetchall()
+    db = SessionLocal()
+    try:
+        eqs = db.query(Equipment).all()
+        query = db.query(Log)
 
-    query = "SELECT timestamp, eq_id, action, details, username FROM logs WHERE 1=1"
-    params = []
+        # กรองข้อมูล Log ตาม ปี/เดือน/วัน (รองรับรูปแบบ String "YYYY-MM-DD HH:MM:SS")
+        if year and year != "ALL":
+            query = query.filter(Log.timestamp.like(f"{year}-%"))
+        if month and month != "ALL":
+            month_str = f"{int(month):02d}"
+            query = query.filter(Log.timestamp.like(f"%-{month_str}-%"))
+        if day and day != "ALL":
+            day_str = f"{int(day):02d}"
+            query = query.filter(Log.timestamp.like(f"%-{day_str} %"))
 
-    if year and year != "ALL":
-        query += " AND strftime('%Y', timestamp) = ?"
-        params.append(year)
-    if month and month != "ALL":
-        query += " AND strftime('%m', timestamp) = ?"
-        params.append(f"{int(month):02d}")
-    if day and day != "ALL":
-        query += " AND strftime('%d', timestamp) = ?"
-        params.append(f"{int(day):02d}")
+        logs = query.order_by(Log.id.desc()).limit(200).all()
 
-    query += " ORDER BY id DESC LIMIT 200"
-    
-    cursor.execute(query, params)
-    logs = cursor.fetchall()
-    conn.close()
+        equipments_data = []
+        for e in eqs:
+            qr_src = generate_qrcode_svg(e.id)
+            equipments_data.append({
+                "id": e.id,
+                "name": e.name,
+                "status": e.status,
+                "image": e.image or "",
+                "qrcode": qr_src
+            })
 
-    equipments_data = []
-    for e in eqs:
-        eq_id = e[0]
-        qr_src = generate_qrcode_svg(eq_id)
-        equipments_data.append({
-            "id": eq_id,
-            "name": e[1],
-            "status": e[2],
-            "image": e[3],
-            "qrcode": qr_src
-        })
-
-    return {
-        "equipments": equipments_data,
-        "logs": [{"timestamp": l[0], "eq_id": l[1], "action": l[2], "details": l[3], "username": l[4]} for l in logs]
-    }
+        return {
+            "equipments": equipments_data,
+            "logs": [{"timestamp": l.timestamp, "eq_id": l.eq_id, "action": l.action, "details": l.details, "username": l.username} for l in logs]
+        }
+    finally:
+        db.close()
 
 @app.post("/api/equipment/delete")
 async def delete_equipment(eq_id: str = Form(...), pin: str = Form(...), token: str = Form(...)):
@@ -330,14 +365,20 @@ async def delete_equipment(eq_id: str = Form(...), pin: str = Form(...), token: 
     if pin != get_admin_pin():
         return {"success": False, "message": "รหัสผ่าน Admin PIN ไม่ถูกต้อง!"}
 
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM equipments WHERE id = ?", (eq_id,))
-    conn.commit()
-    conn.close()
+    db = SessionLocal()
+    try:
+        eq = db.query(Equipment).filter(Equipment.id == eq_id).first()
+        if eq:
+            db.delete(eq)
+            db.commit()
 
-    add_db_log(eq_id, "DELETE", "ลบรายการอุปกรณ์ออกจากระบบ", username)
-    return {"success": True, "message": f"ลบอุปกรณ์ {eq_id} เรียบร้อยแล้ว"}
+        add_db_log(eq_id, "DELETE", "ลบรายการอุปกรณ์ออกจากระบบ", username)
+        return {"success": True, "message": f"ลบอุปกรณ์ {eq_id} เรียบร้อยแล้ว"}
+    except Exception:
+        db.rollback()
+        return {"success": False, "message": "เกิดข้อผิดพลาดในการลบอุปกรณ์"}
+    finally:
+        db.close()
 
 @app.post("/api/equipment/edit")
 async def edit_equipment(eq_id: str = Form(...), name: str = Form(...), pin: str = Form(...), token: str = Form(...)):
@@ -346,44 +387,70 @@ async def edit_equipment(eq_id: str = Form(...), name: str = Form(...), pin: str
     if pin != get_admin_pin():
         return {"success": False, "message": "รหัสผ่าน Admin PIN ไม่ถูกต้อง!"}
 
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("UPDATE equipments SET name = ? WHERE id = ?", (name, eq_id))
-    conn.commit()
-    conn.close()
+    db = SessionLocal()
+    try:
+        eq = db.query(Equipment).filter(Equipment.id == eq_id).first()
+        if eq:
+            eq.name = name
+            db.commit()
 
-    add_db_log(eq_id, "EDIT", f"แก้ไขชื่ออุปกรณ์เป็น: {name}", username)
-    return {"success": True, "message": f"แก้ไขข้อมูล {eq_id} เรียบร้อยแล้ว"}
+        add_db_log(eq_id, "EDIT", f"แก้ไขชื่ออุปกรณ์เป็น: {name}", username)
+        return {"success": True, "message": f"แก้ไขข้อมูล {eq_id} เรียบร้อยแล้ว"}
+    except Exception:
+        db.rollback()
+        return {"success": False, "message": "เกิดข้อผิดพลาดในการแก้ไขข้อมูล"}
+    finally:
+        db.close()
 
 @app.post("/api/register_equipment")
 async def register_equipment(eq_id: str = Form(...), name: str = Form(...), admin_pin: str = Form(...)):
     if admin_pin != get_admin_pin():
         return JSONResponse(status_code=403, content={"success": False, "message": "PIN Admin ไม่ถูกต้อง"})
 
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("INSERT OR REPLACE INTO equipments VALUES (?, ?, 'AVAILABLE', '')", (eq_id, name))
-    conn.commit()
-    conn.close()
+    db = SessionLocal()
+    try:
+        eq = db.query(Equipment).filter(Equipment.id == eq_id).first()
+        if eq:
+            eq.name = name
+            eq.status = "AVAILABLE"
+        else:
+            eq = Equipment(id=eq_id, name=name, status="AVAILABLE", image="")
+            db.add(eq)
+        
+        db.commit()
 
-    add_db_log(eq_id, "REGISTER", f"เพิ่มอุปกรณ์ใหม่: {name}", "admin")
-    return {"success": True, "message": f"ลงทะเบียน {eq_id} สำเร็จ"}
+        add_db_log(eq_id, "REGISTER", f"เพิ่มอุปกรณ์ใหม่: {name}", "admin")
+        return {"success": True, "message": f"ลงทะเบียน {eq_id} สำเร็จ"}
+    except Exception:
+        db.rollback()
+        return {"success": False, "message": "เกิดข้อผิดพลาดในการลงทะเบียนอุปกรณ์"}
+    finally:
+        db.close()
 
 @app.post("/api/change_admin_pin")
 async def change_admin_pin(old_pin: str = Form(...), new_pin: str = Form(...)):
     if old_pin != get_admin_pin():
         return {"success": False, "message": "รหัส PIN เดิมไม่ถูกต้อง"}
 
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("UPDATE settings SET value = ? WHERE key = 'admin_pin'", (new_pin,))
-    conn.commit()
-    conn.close()
-    
-    add_db_log("SYSTEM", "CHANGE_ADMIN_PIN", "เปลี่ยนรหัสผ่าน Admin Action PIN สำเร็จ", "admin")
-    return {"success": True, "message": "เปลี่ยน Admin PIN สำเร็จ!"}
+    db = SessionLocal()
+    try:
+        setting = db.query(Setting).filter(Setting.key == "admin_pin").first()
+        if setting:
+            setting.value = new_pin
+        else:
+            setting = Setting(key="admin_pin", value=new_pin)
+            db.add(setting)
+        
+        db.commit()
+
+        add_db_log("SYSTEM", "CHANGE_ADMIN_PIN", "เปลี่ยนรหัสผ่าน Admin Action PIN สำเร็จ", "admin")
+        return {"success": True, "message": "เปลี่ยน Admin PIN สำเร็จ!"}
+    except Exception:
+        db.rollback()
+        return {"success": False, "message": "ไม่สามารถเปลี่ยน Admin PIN ได้"}
+    finally:
+        db.close()
 
 if __name__ == "__main__":
-    init_db()
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

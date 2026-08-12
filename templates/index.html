@@ -72,7 +72,7 @@
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4">
                     <div class="flex justify-between items-center border-b pb-2">
                         <h2 class="font-bold text-base text-gray-800 flex items-center gap-2">
-                            <span>📜</span> ประวัติการยืมสินค้า (แบ่งตามวันที่)
+                            <span>📜</span> ยืมสินค้า
                         </h2>
                         <input type="date" id="borrowFilterDate" onchange="renderBorrowHistory()" class="px-3 py-1 border rounded-xl text-xs outline-none bg-slate-50">
                     </div>
@@ -85,7 +85,7 @@
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4">
                     <div class="flex justify-between items-center border-b pb-2">
                         <h2 class="font-bold text-base text-gray-800 flex items-center gap-2">
-                            <span>📥</span> รายการคืนสินค้า (แบ่งตามวันที่)
+                            <span>📥</span> คืนสินค้า
                         </h2>
                         <input type="date" id="returnFilterDate" onchange="renderReturnHistory()" class="px-3 py-1 border rounded-xl text-xs outline-none bg-slate-50">
                     </div>
@@ -97,7 +97,7 @@
             <div id="vehicleView" class="tab-content hidden space-y-4">
                 <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 space-y-4">
                     <h2 class="font-bold text-base text-gray-800 flex items-center gap-2 border-b pb-3">
-                        <span>🚚</span> ลงทะเบียนรถขนส่ง และ ผู้ขับ
+                        <span>🚚</span> ลงทะเบียนรถขนส่ง
                     </h2>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
@@ -148,11 +148,11 @@
         <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around py-2 z-20 shadow-lg">
             <button id="nav-borrowView" onclick="switchTab('borrowView')" class="nav-btn flex flex-col items-center text-indigo-600">
                 <span class="text-xl">📤</span>
-                <span class="text-[10px] font-semibold mt-0.5">ประวัติยืม</span>
+                <span class="text-[10px] font-semibold mt-0.5">ยืมสินค้า</span>
             </button>
             <button id="nav-returnView" onclick="switchTab('returnView')" class="nav-btn flex flex-col items-center text-gray-400">
                 <span class="text-xl">📥</span>
-                <span class="text-[10px] font-semibold mt-0.5">การคืน</span>
+                <span class="text-[10px] font-semibold mt-0.5">คืนสินค้า</span>
             </button>
             <button id="nav-vehicleView" onclick="switchTab('vehicleView')" class="nav-btn flex flex-col items-center text-gray-400">
                 <span class="text-xl">🚚</span>
@@ -173,7 +173,7 @@
                 <button onclick="closeScannerModal()" class="text-gray-400 hover:text-red-500 font-bold text-lg">✕</button>
             </div>
             <div id="interactive" class="w-full h-64 bg-black rounded-xl overflow-hidden relative"></div>
-            <p class="text-xs text-gray-500">นำกล้องไปจ่อที่ QR Code หรือ Barcode บนกล่องสินค้า</p>
+            <p class="text-xs text-gray-500">นำกล้องไปจ่อสแกน QR Code หรือ Barcode บนกล่องสินค้า</p>
         </div>
     </div>
 
@@ -320,7 +320,7 @@
 
             // ถ้าสินค้านี้ถูกยืมอยู่นำไปสแกนคืนทันที
             if (item && item.status === 'BORROWED') {
-                if (confirm(`สินค้ารหัส [${scannedCode}] กำลังถูกยืมอยู่ ต้องการสแกนคืนสินค้าเลยหรือไม่?`)) {
+                if (confirm(`สินค้ารหัส [${scannedCode}] กำลังถูกยืมอยู่ ต้องการสแกนคืนสินค้าหรือไม่?`)) {
                     confirmCheckinByScan(scannedCode);
                 }
             } else {

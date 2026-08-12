@@ -1,20 +1,17 @@
 import os
 import json
 import uuid
-import qrcode
-import io
-import base64
 from datetime import datetime
 from flask import Flask, request, jsonify, render_template
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 
-# File Paths
 USERS_FILE = 'data/users.json'
 EQUIPMENT_FILE = 'data/equipment.json'
 CONFIG_FILE = 'data/config.json'
 LOGS_FILE = 'data/logs.json'
+VEHICLES_FILE = 'data/vehicles.json'
 
 os.makedirs('data', exist_ok=True)
 
@@ -31,15 +28,6 @@ def load_json(filepath, default):
 def save_json(filepath, data):
     with open(filepath, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
-
-def generate_qr_base64(text):
-    qr = qrcode.QRCode(version=1, box_size=5, border=2)
-    qr.add_data(text)
-    qr.make(fit=True)
-    img = qr.make_image(fill_color="black", back_color="white")
-    buffered = io.BytesIO()
-    img.save(buffered, format="PNG")
-    return "data:image/png;base64," + base64.b64encode(buffered.getvalue()).decode()
 
 def get_current_user(token):
     users = load_json(USERS_FILE, {})
@@ -87,6 +75,40 @@ def register():
     save_json(USERS_FILE, users)
     return jsonify({"success": True, "message": "สมัครสมาชิกเรียบร้อยแล้ว"})
 
+# --- ขนส่ง ---
+@app.route('/api/register_vehicle', methods=['POST'])
+def register_vehicle():
+    data = request.json or {}
+    plate = (data.get('plate_number') or '').strip()
+    driver = (data.get('driver_name') or '').strip()
+    
+    if not plate or not driver:
+        return jsonify({"success": False, "message": "กรุณากรอกทะเบียนรถและชื่อคนขับ"}), 400
+        
+    vehicles = load_json(VEHICLES_FILE, [])
+    for v in vehicles:
+        if v['plate_number'] == plate:
+            return jsonify({"success": False, "message": "ทะเบียนรถนี้ลงทะเบียนไว้แล้ว"}), 400
+            
+    vehicles.append({
+        "id": str(uuid.uuid4()),
+        "plate_number": plate,
+        "driver_name": driver,
+        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    })
+    save_json(VEHICLES_FILE, vehicles)
+    return jsonify({"success": True, "message": "ลงทะเบียนรถเรียบร้อยแล้ว"})
+
+@app.route('/api/delete_vehicle', methods=['POST'])
+def delete_vehicle():
+    data = request.json or {}
+    v_id = data.get('vehicle_id')
+    vehicles = load_json(VEHICLES_FILE, [])
+    vehicles = [v for v in vehicles if v['id'] != v_id]
+    save_json(VEHICLES_FILE, vehicles)
+    return jsonify({"success": True, "message": "ลบข้อมูลขนส่งเรียบร้อยแล้ว"})
+
+# --- สินค้าและการยืม/คืน ---
 @app.route('/api/register_equipment', methods=['POST'])
 def register_equipment():
     admin_pin = request.form.get('admin_pin')
@@ -101,8 +123,6 @@ def register_equipment():
     if eq_id in equipments:
         return jsonify({"success": False, "message": "รหัสสินค้านี้มีในระบบแล้ว"}), 400
         
-    qr_b64 = generate_qr_base64(eq_id)
-    
     equipments[eq_id] = {
         "id": eq_id,
         "name": name,
@@ -110,8 +130,7 @@ def register_equipment():
         "borrowed_by": None,
         "borrowed_at": None,
         "plate_number": None,
-        "driver_name": None,
-        "qrcode": qr_b64
+        "driver_name": None
     }
     save_json(EQUIPMENT_FILE, equipments)
     return jsonify({"success": True, "message": "เพิ่มสินค้าใหม่เรียบร้อยแล้ว"})
@@ -142,22 +161,32 @@ def checkout():
     data = request.json or {}
     token = data.get('token')
     eq_id = data.get('eq_id')
-    plate = (data.get('plate_number') or '').strip()
-    driver = (data.get('driver_name') or '').strip()
+    vehicle_id = data.get('vehicle_id')
     
     username = get_current_user(token)
     if not username:
         return jsonify({"success": False, "message": "ไม่ได้เข้าสู่ระบบ"}), 401
         
     equipments = load_json(EQUIPMENT_FILE, {})
+    vehicles = load_json(VEHICLES_FILE, [])
+    
+    target_vehicle = next((v for v in vehicles if v['id'] == vehicle_id), None)
+    if not target_vehicle:
+        return jsonify({"success": False, "message": "กรุณาเลือกรถขนส่งที่ลงทะเบียนไว้"}), 400
+        
+    plate = target_vehicle['plate_number']
+    driver = target_vehicle['driver_name']
+    
     if eq_id not in equipments:
-        return jsonify({"success": False, "message": "ไม่พบรหัสสินค้านี้"}), 404
+        return jsonify({"success": False, "message": "ไม่พบรหัสสินค้านี้ในระบบ"}), 404
         
     item = equipments[eq_id]
-    if item['status'] != 'AVAILABLE':
-        return jsonify({"success": False, "message": "สินค้านี้ถูกยืมอยู่ ไม่สามารถยืมซ้ำได้"}), 400
+    
+    # บล็อกไม่ให้ยืมซ้ำ
+    if item['status'] == 'BORROWED':
+        return jsonify({"success": False, "message": f"สินค้านี้ ({eq_id}) ถูกยืมไปแล้ว ไม่สามารถสแกนยืมซ้ำได้! ต้องสแกนคืนก่อน"}), 400
 
-    # เงื่อนไข: คนขับคนเดิม ยืมคนละทะเบียน -> แจ้งเตือนให้คืนก่อน
+    # ตรวจสอบคนขับคนเดิมยืมต่างทะเบียน
     for eq_key, eq_val in equipments.items():
         if eq_val.get('status') == 'BORROWED':
             existing_driver = (eq_val.get('driver_name') or '').strip()
@@ -166,10 +195,11 @@ def checkout():
             if existing_driver and existing_driver == driver and existing_plate != plate:
                 return jsonify({
                     "success": False,
-                    "message": f"คุณ{driver} มีรายการยืมค้างอยู่กับทะเบียน {existing_plate} กรุณาคืนของก่อน หรือใช้ทะเบียนเดิมในการยืม"
+                    "message": f"คุณ{driver} มีรายการยืมค้างอยู่กับทะเบียน {existing_plate} กรุณาคืนของก่อน"
                 }), 400
         
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now_dt = datetime.now()
+    now_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
     
     item['status'] = 'BORROWED'
     item['borrowed_by'] = username
@@ -186,58 +216,65 @@ def checkout():
         "borrowed_by": username,
         "borrowed_at": now_str,
         "returned_at": None,
+        "returned_by": None,
         "plate_number": plate,
-        "driver_name": driver
+        "driver_name": driver,
+        "status": "BORROWED"
     }
     logs.insert(0, log_entry)
     save_json(LOGS_FILE, logs)
     
-    return jsonify({"success": True, "message": f"บันทึกการยืม {item['name']} เรียบร้อยแล้ว"})
+    return jsonify({"success": True, "message": f"สแกนยืมสำเร็จ: {item['name']} ({eq_id})"})
 
 @app.route('/api/checkin', methods=['POST'])
 def checkin():
     data = request.json or {}
     token = data.get('token')
     eq_id = data.get('eq_id')
+    log_id = data.get('log_id')
     
     username = get_current_user(token)
     if not username:
         return jsonify({"success": False, "message": "ไม่ได้เข้าสู่ระบบ"}), 401
         
     equipments = load_json(EQUIPMENT_FILE, {})
-    if eq_id not in equipments:
-        return jsonify({"success": False, "message": "ไม่พบรหัสสินค้านี้"}), 404
-        
-    item = equipments[eq_id]
-    if item['status'] != 'BORROWED':
-        return jsonify({"success": False, "message": "สินค้านี้อยู่ในสถานะพร้อมยืมอยู่แล้ว"}), 400
-        
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
     logs = load_json(LOGS_FILE, [])
-    for log in logs:
-        if log['eq_id'] == eq_id and log['returned_at'] is None:
-            log['returned_at'] = now_str
-            log['returned_by'] = username
-            break
+    
+    target_log = None
+    if log_id:
+        target_log = next((l for l in logs if l['log_id'] == log_id), None)
+    elif eq_id:
+        target_log = next((l for l in logs if l['eq_id'] == eq_id and l['status'] == 'BORROWED'), None)
+
+    if not target_log:
+        return jsonify({"success": False, "message": "ไม่พบรายการยืมค้างอยู่ของสินค้านี้"}), 404
+
+    target_log['returned_at'] = now_str
+    target_log['returned_by'] = username
+    target_log['status'] = 'RETURNED'
     save_json(LOGS_FILE, logs)
     
-    item['status'] = 'AVAILABLE'
-    item['borrowed_by'] = None
-    item['borrowed_at'] = None
-    item['plate_number'] = None
-    item['driver_name'] = None
-    save_json(EQUIPMENT_FILE, equipments)
-    
-    return jsonify({"success": True, "message": f"คืน {item['name']} สำเร็จเรียบร้อยแล้ว"})
+    if target_log['eq_id'] in equipments:
+        item = equipments[target_log['eq_id']]
+        item['status'] = 'AVAILABLE'
+        item['borrowed_by'] = None
+        item['borrowed_at'] = None
+        item['plate_number'] = None
+        item['driver_name'] = None
+        save_json(EQUIPMENT_FILE, equipments)
+        
+    return jsonify({"success": True, "message": f"สแกนคืนสินค้า {target_log['eq_name']} เรียบร้อยแล้ว"})
 
 @app.route('/api/dashboard_data', methods=['GET'])
 def dashboard_data():
     equipments = load_json(EQUIPMENT_FILE, {})
     logs = load_json(LOGS_FILE, [])
+    vehicles = load_json(VEHICLES_FILE, [])
     return jsonify({
         "equipments": list(equipments.values()),
-        "logs": logs
+        "logs": logs,
+        "vehicles": vehicles
     })
 
 @app.route('/api/change_username', methods=['POST'])
@@ -254,9 +291,6 @@ def change_username():
     users = load_json(USERS_FILE, {})
     if not check_password_hash(users[current_user]['password_hash'], password_confirm):
         return jsonify({"success": False, "message": "รหัสผ่านไม่ถูกต้อง"}), 400
-        
-    if new_username in users and new_username != current_user:
-        return jsonify({"success": False, "message": "Username นี้ถูกใช้งานแล้ว"}), 400
         
     users[new_username] = users.pop(current_user)
     new_token = str(uuid.uuid4())
